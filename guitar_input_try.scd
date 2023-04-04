@@ -3,7 +3,7 @@
 // Connect the audio interface or amplifier's line-level output to your computer's audio interface using an audio cable.
 
 s.boot;
-s.options.numInputBusChannels = 1; // This will create a new audio input bus with one channel.
+s.options.numInputBusChannels = 1;// This will create a new audio input bus with one channel.
 
 s.reboot;
 
