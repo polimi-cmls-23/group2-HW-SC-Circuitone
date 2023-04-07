@@ -7,14 +7,16 @@ SynthDef(\scopes,{
 	// var inputBus, outputBus;
 	var myBuffer, tf;
 
-	var gain;
+	var gain, thr;
 
-	gain = 10;
+	gain = 1.8;
+	thr = 0.5;
 
 	~inputBus = Bus.audio(s, 2);
 	~outputBus = Bus.audio(s, 2);
+	~xyBus = Bus.audio(s, 2);
 
-	inputSignal = SinOsc.ar([220, 440], mul:0.5);
+	inputSignal = SinOsc.ar([220, 220], mul:1);
 
 	//********************************************************
 	// Transfer functions
@@ -31,9 +33,53 @@ SynthDef(\scopes,{
 	*/
 
 	// Quadratic
+	//***************************************************************
+	// Link to the GeoGebra site: https://www.geogebra.org/m/x5bhsngv
+	//***************************************************************
 
 	myBuffer = Buffer.alloc(s, 1024, 1);
-	tf = Signal.fill(513, { |i| i.linlin(85.0, 427.0, -1, 1)}).normalizeTransfer;
+
+	tf = Signal.newClear(513);
+	tf.waveFill({arg x, old, i; 2*x-1}); // 0 < x_axis < 513    -1 < y_axis < 1
+	tf.waveFill({arg x, old, i;  //    0 < x < 1    -1 < old < 1    0 < i < 512
+		if((old>0),
+			{// positive
+				if((old<(thr/gain)),
+					{// linear
+						("linear pos"+"i ="+i).postln;
+						old*gain
+					},
+					{if((old<((2-thr)/gain)),
+						{// quatratic
+							("quadratic pos"+"i ="+i).postln;
+							((((old-((2-thr)/gain)).squared)*gain*gain)/(4*(thr-1)))+1
+						},
+						{// clip
+							("clip pos"+"i ="+i).postln;
+							1
+					})
+				})
+			},
+			{// negative
+				if((old>((-1)*thr/gain)),
+					{// linear
+						("linear neg"+"i ="+i).postln;
+						old*gain
+					},
+					{if((old>((thr-2)/gain)),
+						{// quatratic
+							("quadratic neg"+"i ="+i).postln;
+							((((old-((thr-2)/gain)).squared)*gain*gain)/(4*(1-thr)))-1
+						},
+						{// clip
+							("clip neg"+"i ="+i).postln;
+							-1
+					})
+				})
+			}
+		)
+	});
+
 	tf.plot;
 
 	myBuffer.sendCollection(tf.asWavetableNoWrap);
@@ -43,16 +89,17 @@ SynthDef(\scopes,{
 	//********************************************************
 	Out.ar(~inputBus, inputSignal);
 	Out.ar(~outputBus, outputSignal);
+	Out.ar(~xyBus, [inputSignal.sum, outputSignal.sum]);
 
 }).send(s);
 )
 
 (
 
-var inputScope, outputScope, startButton;
+var inputScope, outputScope, startButton, xyScope;
 var mySynth = Synth(\scopes);
 
-w = Window.new("my own scope", Rect(20, 20, 600, 400));
+w = Window.new("my own scope", Rect(20, 20, 800, 400));
 w.view.decorator = FlowLayout(w.view.bounds);
 /*
 startButton = Button(w, Rect(20, 20, 340, 30))
@@ -65,8 +112,11 @@ startButton = Button(w, Rect(20, 20, 340, 30))
 });
 */
 inputScope = Stethoscope.new(s, numChannels: 2, index: ~inputBus.index, view:w.view);
+xyScope = Stethoscope.new(s, numChannels: 2, index: ~xyBus.index, view:w.view);
 outputScope = Stethoscope.new(s, numChannels: 2, index: ~outputBus.index, view:w.view);
-w.onClose = { inputScope.free; outputScope.free; };
+xyScope.style = 2;
+w.onClose = { inputScope.free; outputScope.free; xyScope.free; };
 w.front;
 
 )
+
