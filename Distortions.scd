@@ -1,25 +1,36 @@
 s.reboot;
 
 (
-SynthDef(\scopes,{
+
+~inputBus = Bus.audio(s, 2);
+~outputBus = Bus.audio(s, 2);
+~xyBus = Bus.audio(s, 2);
+~myBuffer = Buffer.alloc(s, 1024, 1);
+// ~inputSignal = SinOsc.ar([220, 220], mul:1);
+// ~outputSignal = Signal.new;
+
+)
+
+
+(
+~mySynth = SynthDef(\scopes,{
 
 	var inputSignal, outputSignal;
+	// var outputSignal;
 	// var inputBus, outputBus;
-	var myBuffer, tf;
+	var tf;
 
 	var gain, thr;
 
-	gain = 1.8;
-	thr = 0.5;
+	gain = 2;
+	thr = 0.4;
 
-	~inputBus = Bus.audio(s, 2);
-	~outputBus = Bus.audio(s, 2);
-	~xyBus = Bus.audio(s, 2);
 
 	inputSignal = SinOsc.ar([220, 220], mul:1);
 
 	//********************************************************
 	// Transfer functions
+	//********************************************************
 
 	// tanh behaviour
 	/*
@@ -37,7 +48,7 @@ SynthDef(\scopes,{
 	// Link to the GeoGebra site: https://www.geogebra.org/m/x5bhsngv
 	//***************************************************************
 
-	myBuffer = Buffer.alloc(s, 1024, 1);
+	// myBuffer = Buffer.alloc(s, 1024, 1);
 
 	tf = Signal.newClear(513);
 	tf.waveFill({arg x, old, i; 2*x-1}); // 0 < x_axis < 513    -1 < y_axis < 1
@@ -46,16 +57,16 @@ SynthDef(\scopes,{
 			{// positive
 				if((old<(thr/gain)),
 					{// linear
-						("linear pos"+"i ="+i).postln;
+						// ("linear pos"+"i ="+i).postln;
 						old*gain
 					},
 					{if((old<((2-thr)/gain)),
 						{// quatratic
-							("quadratic pos"+"i ="+i).postln;
+							// ("quadratic pos"+"i ="+i).postln;
 							((((old-((2-thr)/gain)).squared)*gain*gain)/(4*(thr-1)))+1
 						},
 						{// clip
-							("clip pos"+"i ="+i).postln;
+							// ("clip pos"+"i ="+i).postln;
 							1
 					})
 				})
@@ -63,16 +74,16 @@ SynthDef(\scopes,{
 			{// negative
 				if((old>((-1)*thr/gain)),
 					{// linear
-						("linear neg"+"i ="+i).postln;
+						// ("linear neg"+"i ="+i).postln;
 						old*gain
 					},
 					{if((old>((thr-2)/gain)),
 						{// quatratic
-							("quadratic neg"+"i ="+i).postln;
+							// ("quadratic neg"+"i ="+i).postln;
 							((((old-((thr-2)/gain)).squared)*gain*gain)/(4*(1-thr)))-1
 						},
 						{// clip
-							("clip neg"+"i ="+i).postln;
+							// ("clip neg"+"i ="+i).postln;
 							-1
 					})
 				})
@@ -82,9 +93,11 @@ SynthDef(\scopes,{
 
 	tf.plot;
 
-	myBuffer.sendCollection(tf.asWavetableNoWrap);
+	~myBuffer.sendCollection(tf.asWavetableNoWrap);
 
-	outputSignal = Shaper.ar(myBuffer, inputSignal, 1, 0);
+	~myBuffer.plot;
+
+	outputSignal = Shaper.ar(~myBuffer, inputSignal, 1, 0);
 
 	//********************************************************
 	Out.ar(~inputBus, inputSignal);
@@ -96,27 +109,43 @@ SynthDef(\scopes,{
 
 (
 
-var inputScope, outputScope, startButton, xyScope;
-var mySynth = Synth(\scopes);
+var inputScope, outputScope, startButton, xyScope, inputFreqScope, outputFreqScope;
+// var mySynth = Synth(\scopes);
+~mySynth.play(s);
 
-w = Window.new("my own scope", Rect(20, 20, 800, 400));
+w = Window.new("my own scope", Rect(20, 20, 800, 500));
 w.view.decorator = FlowLayout(w.view.bounds);
-/*
-startButton = Button(w, Rect(20, 20, 340, 30))
-.states_([
-	["play", Color.black, Color.green],
-	["stop", Color.black, Color.red]
-])
-.action_({ arg butt;
-	if(butt.value == 0, mySynth.run(false), mySynth.run(true));
-});
-*/
+
 inputScope = Stethoscope.new(s, numChannels: 2, index: ~inputBus.index, view:w.view);
 xyScope = Stethoscope.new(s, numChannels: 2, index: ~xyBus.index, view:w.view);
 outputScope = Stethoscope.new(s, numChannels: 2, index: ~outputBus.index, view:w.view);
+inputFreqScope = FreqScopeView(w, Rect(0, 300, 370, 200));
+outputFreqScope = FreqScopeView(w, Rect(370, 300, 370, 200));
+inputFreqScope.active_(true);
+outputFreqScope.active_(true);
+inputFreqScope.freqMode_(1);
+outputFreqScope.freqMode_(1);
+inputFreqScope.inBus_(~inputBus);
+outputFreqScope.inBus_(~outputBus);
+
+xyScope.yZoom = 0.4;
 xyScope.style = 2;
-w.onClose = { inputScope.free; outputScope.free; xyScope.free; };
+
+w.onClose = {
+	inputScope.free;
+	outputScope.free;
+	xyScope.free;
+	inputFreqScope.kill;
+	outputFreqScope.kill;
+	~myBuffer.free;
+	~inputBus.free;
+	~outputBus.free;
+	~xyBus.free;
+	// ~inputSignal.free;
+	// ~outputSignal.free;
+	~mySynth.free;
+};
+
 w.front;
 
 )
-
