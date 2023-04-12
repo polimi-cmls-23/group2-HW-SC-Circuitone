@@ -7,7 +7,6 @@ c3 = Color.new255(red: 251, green: 236, blue: 136, alpha: 255);
 */
 
 // Main window
-
 (
 var wRect;
 var wColor;
@@ -23,7 +22,6 @@ w.alwaysOnTop = true;
 .align_(\center)
 .font_(Font("Kreon", 40));
 )
-
 
 // Knobs
 (
@@ -75,21 +73,18 @@ c.font = f;
 )
 
 
-// Wave scopes, do not work :(
+// Wave scopes
 (
-// For the following code I followed this example: https://subscription.packtpub.com/book/application-development/9781783289677/1/ch01lvl1sec09/scoping-signals
-  var sound = {
-    var signal = Resonz.ar(
-      [ ClipNoise.ar(1.7), ClipNoise.ar(1.8) ],
-      SinOsc.ar(1000).range(100,500)); // a stereo signal
-    ScopeOut.ar(signal, bufferA); // update first buffer
-    ScopeOut.ar(signal, bufferB); // update second buffer
-    Out.ar(0,signal); // write to output
+// For the following code I followed this example: https://subscription.packtpub.com/book/application-development/9781783289677/1/ch01lvl1sec09/scoping-signals and this updated version: https://gist.github.com/gusano/e961e0ce67b09fea80e9
+
+~buffC = Buffer.alloc(s, 1024); // create two buffer in order to plot with ScopeOut2 and ScopeView.
+~buffD = Buffer.alloc(s, 1024);
+  ~sound = { //trial sound
+	~signal = SinOsc.ar([110,  164.81], 0.3); // a stereo signal
+    ScopeOut2.ar(~signal, ~buffC); // update first buffer
+    ScopeOut2.ar(~signal, ~buffD); // update second buffer
+    Out.ar(0,~signal); // write to output
   }.play;
-~buffC = Buffer.alloc(s, s.sampleRate); // create two buffer in order to plot with ScopeOut2 and ScopeView.
-~buffD = Buffer.alloc(s, s.sampleRate);
-ScopeOut2.ar(SinOsc.ar(), ~buffC);
-ScopeOut2.ar(SinOsc.ar(110), ~buffD);
 c = ScopeView(w,Rect(33,370,250,200)).server = s; //By using ScopeView, we need to use buffers and ScopeOut2 -> see ScopeView examples in the search section.
 c.bufnum = (~buffC.bufnum);
 c.start;
@@ -103,12 +98,13 @@ d.start;
 .string_("Distorted waveform")
 .align_(\center)
 .font_(Font("Kreon", 12));
-w.onClose_(
+w.onClose = {(
+	~sound.stop;
 	~buffC.free;
 	~buffD.free;
 	c.stop;
 	d.stop;
-);
+)};
 )
 
 //Pop Up Menu - Distorsion Type
