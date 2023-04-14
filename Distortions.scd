@@ -32,20 +32,24 @@ w.alwaysOnTop = true;
 
 
 (
+
 ~mySynth = SynthDef(\scopes,{
 
 	// var inputSignal, outputSignal;
 	// var outputSignal;
 	// var inputBus, outputBus;
-	var tf;
+	// var tf;
 
-	var gain, thr;
+	// var gain;
+	// var thr;
 
-	gain = 2;
-	thr = 0.4;
+	~gain = 2;
+	~thr = 0.4;
+	~outGain = 1;
 
 
 	~inputSignal = SinOsc.ar(220, mul:1);
+	// ~inputSignal = {SoundIn.ar(0, 1)};
 
 	//********************************************************
 	// Transfer functions
@@ -69,20 +73,20 @@ w.alwaysOnTop = true;
 
 	// myBuffer = Buffer.alloc(s, 1024, 1);
 
-	tf = Signal.newClear(513);
-	tf.waveFill({arg x, old, i; 2*x-1}); // 0 < x_axis < 513    -1 < y_axis < 1
-	tf.waveFill({arg x, old, i;  //    0 < x < 1    -1 < old < 1    0 < i < 512
+	~tf = Signal.newClear(513);
+	~tf.waveFill({arg x, old, i; 2*x-1}); // 0 < x_axis < 513    -1 < y_axis < 1
+	~tf.waveFill({arg x, old, i;  //    0 < x < 1    -1 < old < 1    0 < i < 512
 		if((old>0),
 			{// positive
-				if((old<(thr/gain)),
+				if((old<(~thr/~gain)),
 					{// linear
 						// ("linear pos"+"i ="+i).postln;
-						old*gain
+						old*~gain
 					},
-					{if((old<((2-thr)/gain)),
+					{if((old<((2-~thr)/~gain)),
 						{// quatratic
 							// ("quadratic pos"+"i ="+i).postln;
-							((((old-((2-thr)/gain)).squared)*gain*gain)/(4*(thr-1)))+1
+							((((old-((2-~thr)/~gain)).squared)*~gain*~gain)/(4*(~thr-1)))+1
 						},
 						{// clip
 							// ("clip pos"+"i ="+i).postln;
@@ -91,15 +95,15 @@ w.alwaysOnTop = true;
 				})
 			},
 			{// negative
-				if((old>((-1)*thr/gain)),
+				if((old>((-1)*~thr/~gain)),
 					{// linear
 						// ("linear neg"+"i ="+i).postln;
-						old*gain
+						old*~gain
 					},
-					{if((old>((thr-2)/gain)),
+					{if((old>((~thr-2)/~gain)),
 						{// quatratic
 							// ("quadratic neg"+"i ="+i).postln;
-							((((old-((thr-2)/gain)).squared)*gain*gain)/(4*(1-thr)))-1
+							((((old-((~thr-2)/~gain)).squared)*~gain*~gain)/(4*(1-~thr)))-1
 						},
 						{// clip
 							// ("clip neg"+"i ="+i).postln;
@@ -110,13 +114,14 @@ w.alwaysOnTop = true;
 		)
 	});
 
-	// tf.plot;
+	// ~tf.plot;
 
-	~myBuffer.sendCollection(tf.asWavetableNoWrap);
+	~myBuffer.sendCollection(~tf.asWavetableNoWrap);
 
 	// ~myBuffer.plot;
 
 	~outputSignal = Shaper.ar(~myBuffer, ~inputSignal, 1, 0);
+	~outputSignal = ~outputSignal * ~outGain;
 
 	//********************************************************
 	Out.ar(~inputBus, ~inputSignal);
@@ -124,6 +129,7 @@ w.alwaysOnTop = true;
 	Out.ar(~xyBus, [~inputSignal, ~outputSignal]);
 
 }).play(s, addAction: \addToTail);
+
 )
 
 
@@ -138,7 +144,9 @@ w.alwaysOnTop = true;
 ~xyBuffer = Buffer.alloc(s, 1024, 2);
 ~sound = { //trial sound
 	~inputSignal = SinOsc.ar(10, mul:1);
+	// ~inputSignal = {SoundIn.ar(0, 1)};
 	~outputSignal = Shaper.ar(~myBuffer, ~inputSignal, 1, 0);
+	~outputSignal = ~outputSignal * ~outGain;
     ScopeOut2.ar(~inputSignal, ~inputBuffer); // update first buffer
     ScopeOut2.ar(~outputSignal, ~outputBuffer); // update second buffer
 	ScopeOut2.ar([~inputSignal, ~outputSignal], ~xyBuffer); // update second buffer
@@ -196,22 +204,151 @@ w.onClose = {(
 // Knobs
 (
 
-var k1_input_level;
+// var k1_input_level;
 var k2_tone;
-var k3_disType;
+// var k3_disType;
 var k4_output_level;
 o = ControlSpec.new(minval: 0.0, maxval: 10.0);
 i = ControlSpec.new(minval: 0.0, maxval: 10.0);
 t = ControlSpec.new(minval: 0.0, maxval: 1.0);
 p = ControlSpec.new(minval: 0.0, maxval: 1.0);
-k1_input_level = EZKnob(w, Rect(100,95, 80, 80), "Input", i, layout: 'vert2');
+~k1_gain = EZKnob(w, Rect(100,95, 80, 80), "Gain", i, layout: 'vert2');
 k2_tone = EZKnob(w, Rect(210, 95, 80, 80), "Tone", t, layout: 'vert2');
-k3_disType = EZKnob(w, Rect(320,95, 80, 80), "Type",  p, layout: 'vert2');
-k4_output_level = EZKnob(w, Rect(430, 95, 80, 80), "Output", o, layout: 'vert2');
-k1_input_level.font = f;
+~k3_disThr = EZKnob(w, Rect(320,95, 80, 80), "Harshness",  p, layout: 'vert2');
+~k4_output_level = EZKnob(w, Rect(430, 95, 80, 80), "Output", o, layout: 'vert2');
+~k1_gain.font = f;
 k2_tone.font = f;
-k3_disType.font = f;
-k4_output_level.font = f;
+~k3_disThr.font = f;
+~k4_output_level.font = f;
+
+)
+
+(
+
+~k3_disThr.action_({
+	arg knob;
+	~thr = knob.value;
+	// ~thr.postln;
+
+	~tf.waveFill({arg x, old, i; 2*x-1}); // 0 < x_axis < 513    -1 < y_axis < 1
+	~tf.waveFill({arg x, old, i;  //    0 < x < 1    -1 < old < 1    0 < i < 512
+		if((old>0),
+			{// positive
+				if((old<(~thr/~gain)),
+					{// linear
+						// ("linear pos"+"i ="+i).postln;
+						old*~gain
+					},
+					{if((old<((2-~thr)/~gain)),
+						{// quatratic
+							// ("quadratic pos"+"i ="+i).postln;
+							((((old-((2-~thr)/~gain)).squared)*~gain*~gain)/(4*(~thr-1)))+1
+						},
+						{// clip
+							// ("clip pos"+"i ="+i).postln;
+							1
+					})
+				})
+			},
+			{// negative
+				if((old>((-1)*~thr/~gain)),
+					{// linear
+						// ("linear neg"+"i ="+i).postln;
+						old*~gain
+					},
+					{if((old>((~thr-2)/~gain)),
+						{// quatratic
+							// ("quadratic neg"+"i ="+i).postln;
+							((((old-((~thr-2)/~gain)).squared)*~gain*~gain)/(4*(1-~thr)))-1
+						},
+						{// clip
+							// ("clip neg"+"i ="+i).postln;
+							-1
+					})
+				})
+			}
+		)
+	});
+
+	// ~tf.plot;
+
+	~myBuffer.sendCollection(~tf.asWavetableNoWrap);
+
+	// ~myBuffer.plot;
+
+	~outputSignal = Shaper.ar(~myBuffer, ~inputSignal, 1, 0);
+	~outputSignal = ~outputSignal * ~outGain;
+});
+
+)
+
+(
+
+~k1_gain.action_({
+	arg knob;
+	~gain = knob.value;
+	// ~gain.postln;
+
+	~tf.waveFill({arg x, old, i; 2*x-1}); // 0 < x_axis < 513    -1 < y_axis < 1
+	~tf.waveFill({arg x, old, i;  //    0 < x < 1    -1 < old < 1    0 < i < 512
+		if((old>0),
+			{// positive
+				if((old<(~thr/~gain)),
+					{// linear
+						// ("linear pos"+"i ="+i).postln;
+						old*~gain
+					},
+					{if((old<((2-~thr)/~gain)),
+						{// quatratic
+							// ("quadratic pos"+"i ="+i).postln;
+							((((old-((2-~thr)/~gain)).squared)*~gain*~gain)/(4*(~thr-1)))+1
+						},
+						{// clip
+							// ("clip pos"+"i ="+i).postln;
+							1
+					})
+				})
+			},
+			{// negative
+				if((old>((-1)*~thr/~gain)),
+					{// linear
+						// ("linear neg"+"i ="+i).postln;
+						old*~gain
+					},
+					{if((old>((~thr-2)/~gain)),
+						{// quatratic
+							// ("quadratic neg"+"i ="+i).postln;
+							((((old-((~thr-2)/~gain)).squared)*~gain*~gain)/(4*(1-~thr)))-1
+						},
+						{// clip
+							// ("clip neg"+"i ="+i).postln;
+							-1
+					})
+				})
+			}
+		)
+	});
+
+	// ~tf.plot;
+
+	~myBuffer.sendCollection(~tf.asWavetableNoWrap);
+
+	// ~myBuffer.plot;
+
+	~outputSignal = Shaper.ar(~myBuffer, ~inputSignal, 1, 0);
+	~outputSignal = ~outputSignal * ~outGain;
+});
+
+)
+
+(
+
+~k4_output_level.action_({
+	arg knob;
+	~outGain = knob.value;
+	~outputSignal = Shaper.ar(~myBuffer, ~inputSignal, 1, 0);
+	~outputSignal = ~outputSignal * ~outGain;
+});
 
 )
 
