@@ -1,44 +1,8 @@
 s.reboot;
 
-// Main window
 (
 
-var wRect;
-var wColor;
-f = Font ("Kreon", 12);
-wRect = Rect(left: 650, top: 150, width: 600, height: 600);
-w = Window("Distorsion", wRect, false);
-wColor = Color.new255(red: 251, green: 236, blue: 136, alpha: 255);
-w.background = wColor;
-w.front;
-w.alwaysOnTop = true;
-~effectName = StaticText(w,Rect(150, 15, 300, 50))
-.string_("DISTEACHER")
-.align_(\center)
-.font_(Font("Kreon", 40));
-
-)
-
-(
-
-~inputBus = Bus.audio(s);
-~outputBus = Bus.audio(s);
-~xyBus = Bus.audio(s);
-~myBuffer = Buffer.alloc(s, 1024, 1);
-// ~inputSignal = SinOsc.ar(220, mul:1);
-// ~outputSignal = Signal.new;
-
-)
-
-(
-
-~mySynth = SynthDef(\scopes,{
-
-	~gain = 1;
-	~thr = 1;
-	~outGain = 1.0;
-	~inputGain = 1.0;
-
+~quadraticFunction = {
 	~inputSignal = SinOsc.ar(10, mul:~inputGain);
 	// ~inputSignal = {SoundIn.ar(0, 1)};
 
@@ -62,7 +26,7 @@ w.alwaysOnTop = true;
 	// Link to the GeoGebra site: https://www.geogebra.org/m/x5bhsngv
 	//***************************************************************
 
-	~tf = Signal.newClear(513);
+	// ~tf = Signal.newClear(513);
 	~tf.waveFill({arg x, old, i; 2*x-1}); // 0 < x_axis < 513    -1 < y_axis < 1
 	~tf.waveFill({arg x, old, i;  //    0 < x < 1    -1 < old < 1    0 < i < 512
 		if((old>0),
@@ -106,9 +70,47 @@ w.alwaysOnTop = true;
 	// ~tf.plot;
 	~myBuffer.sendCollection(~tf.asWavetableNoWrap);
 	// ~myBuffer.plot;
-	~outputSignal = Shaper.ar(~myBuffer, ~inputSignal, 1, 0);
+	Shaper.ar(~myBuffer, ~inputSignal, 1, 0);
+};
 
-	//********************************************************
+)
+
+// Main window
+(
+
+var wRect;
+var wColor;
+f = Font ("Kreon", 12);
+wRect = Rect(left: 650, top: 150, width: 600, height: 600);
+w = Window("Distorsion", wRect, false);
+wColor = Color.new255(red: 251, green: 236, blue: 136, alpha: 255);
+w.background = wColor;
+w.front;
+w.alwaysOnTop = true;
+~effectName = StaticText(w,Rect(150, 15, 300, 50))
+.string_("DISTEACHER")
+.align_(\center)
+.font_(Font("Kreon", 40));
+
+)
+
+(
+
+~inputBus = Bus.audio(s);
+~outputBus = Bus.audio(s);
+~xyBus = Bus.audio(s);
+~myBuffer = Buffer.alloc(s, 1024, 1);
+
+)
+
+(
+
+~mySynth = SynthDef(\scopes,{
+	~gain = 1;
+	~thr = 1;
+	~outGain = 1.0;
+	~inputGain = 1.0;
+	~outputSignal = ~quadraticFunction.value;
 	Out.ar(~inputBus, ~inputSignal);
 	Out.ar(~outputBus, ~outputSignal);
 	Out.ar(~xyBus, [~inputSignal, ~outputSignal]);
@@ -127,10 +129,7 @@ w.alwaysOnTop = true;
 ~xyBuffer = Buffer.alloc(s, 1024, 2);
 ~sound = { //trial sound
 	~inputSignal = SinOsc.ar(10, mul:~inputGain);
-	// ~inputSignal = {SoundIn.ar(0, 1)};
-	~tf = ~tf * ~outGain;
-	~myBuffer.sendCollection(~tf.asWavetableNoWrap);
-	~outputSignal = Shaper.ar(~myBuffer, ~inputSignal, 1, 0) * ~outGain;
+	~outputSignal = ~quadraticFunction.value;
 	ScopeOut2.ar(~inputSignal, ~inputBuffer); // update first buffer
     ScopeOut2.ar(~outputSignal, ~outputBuffer); // update second buffer
 	ScopeOut2.ar([~inputSignal, ~outputSignal], ~xyBuffer); // update second buffer
@@ -203,151 +202,19 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 ~k1_gain.action_({
 	arg knob;
 	~gain = knob.value;
-	~inputSignal = SinOsc.ar(10, mul:~inputGain);
-	~tf.waveFill({arg x, old, i; 2*x-1}); // 0 < x_axis < 513    -1 < y_axis < 1
-	~tf.waveFill({arg x, old, i;  //    0 < x < 1    -1 < old < 1    0 < i < 512
-		if((old>0),
-			{// positive
-				if((old<(~thr/~gain)),
-					{// linear
-						// ("linear pos"+"i ="+i).postln;
-						old*~gain
-					},
-					{if((old<((2-~thr)/~gain)),
-						{// quatratic
-							// ("quadratic pos"+"i ="+i).postln;
-							((((old-((2-~thr)/~gain)).squared)*~gain*~gain)/(4*(~thr-1)))+1
-						},
-						{// clip
-							// ("clip pos"+"i ="+i).postln;
-							1
-					})
-				})
-			},
-			{// negative
-				if((old>((-1)*~thr/~gain)),
-					{// linear
-						// ("linear neg"+"i ="+i).postln;
-						old*~gain
-					},
-					{if((old>((~thr-2)/~gain)),
-						{// quatratic
-							// ("quadratic neg"+"i ="+i).postln;
-							((((old-((~thr-2)/~gain)).squared)*~gain*~gain)/(4*(1-~thr)))-1
-						},
-						{// clip
-							// ("clip neg"+"i ="+i).postln;
-							-1
-					})
-				})
-			}
-		)
-	});
-	~tf = ~tf * ~outGain;
-	// ~tf.plot;
-	~myBuffer.sendCollection(~tf.asWavetableNoWrap);
-	// ~myBuffer.plot;
-	~outputSignal = Shaper.ar(~myBuffer, ~inputSignal, 1, 0);
+	~outputSignal = ~quadraticFunction.value;
 });
 
 ~k3_disThr.action_({
 	arg knob;
 	~thr = knob.value;
-	~inputSignal = SinOsc.ar(10, mul:~inputGain);
-	~tf.waveFill({arg x, old, i; 2*x-1}); // 0 < x_axis < 513    -1 < y_axis < 1
-	~tf.waveFill({arg x, old, i;  //    0 < x < 1    -1 < old < 1    0 < i < 512
-		if((old>0),
-			{// positive
-				if((old<(~thr/~gain)),
-					{// linear
-						// ("linear pos"+"i ="+i).postln;
-						old*~gain
-					},
-					{if((old<((2-~thr)/~gain)),
-						{// quatratic
-							// ("quadratic pos"+"i ="+i).postln;
-							((((old-((2-~thr)/~gain)).squared)*~gain*~gain)/(4*(~thr-1)))+1
-						},
-						{// clip
-							// ("clip pos"+"i ="+i).postln;
-							1
-					})
-				})
-			},
-			{// negative
-				if((old>((-1)*~thr/~gain)),
-					{// linear
-						// ("linear neg"+"i ="+i).postln;
-						old*~gain
-					},
-					{if((old>((~thr-2)/~gain)),
-						{// quatratic
-							// ("quadratic neg"+"i ="+i).postln;
-							((((old-((~thr-2)/~gain)).squared)*~gain*~gain)/(4*(1-~thr)))-1
-						},
-						{// clip
-							// ("clip neg"+"i ="+i).postln;
-							-1
-					})
-				})
-			}
-		)
-	});
-	~tf = ~tf * ~outGain;
-	// ~tf.plot;
-	~myBuffer.sendCollection(~tf.asWavetableNoWrap);
-	// ~myBuffer.plot;
-	~outputSignal = Shaper.ar(~myBuffer, ~inputSignal, 1, 0);
+	~outputSignal = ~quadraticFunction.value;
 });
 
 ~k4_output_level.action_({
 	arg knob;
 	~outGain = knob.value;
-	~inputSignal = SinOsc.ar(10, mul:~inputGain);
-	~tf.waveFill({arg x, old, i; 2*x-1}); // 0 < x_axis < 513    -1 < y_axis < 1
-	~tf.waveFill({arg x, old, i;  //    0 < x < 1    -1 < old < 1    0 < i < 512
-		if((old>0),
-			{// positive
-				if((old<(~thr/~gain)),
-					{// linear
-						// ("linear pos"+"i ="+i).postln;
-						old*~gain
-					},
-					{if((old<((2-~thr)/~gain)),
-						{// quatratic
-							// ("quadratic pos"+"i ="+i).postln;
-							((((old-((2-~thr)/~gain)).squared)*~gain*~gain)/(4*(~thr-1)))+1
-						},
-						{// clip
-							// ("clip pos"+"i ="+i).postln;
-							1
-					})
-				})
-			},
-			{// negative
-				if((old>((-1)*~thr/~gain)),
-					{// linear
-						// ("linear neg"+"i ="+i).postln;
-						old*~gain
-					},
-					{if((old>((~thr-2)/~gain)),
-						{// quatratic
-							// ("quadratic neg"+"i ="+i).postln;
-							((((old-((~thr-2)/~gain)).squared)*~gain*~gain)/(4*(1-~thr)))-1
-						},
-						{// clip
-							// ("clip neg"+"i ="+i).postln;
-							-1
-					})
-				})
-			}
-		)
-	});
-	~tf = ~tf * ~outGain;
-	// ~tf.plot;
-	~myBuffer.sendCollection(~tf.asWavetableNoWrap);
-	// ~myBuffer.plot;
-	~outputSignal = Shaper.ar(~myBuffer, ~inputSignal, 1, 0);
+	~outputSignal = ~quadraticFunction.value;
 });
 
 )
@@ -384,17 +251,29 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 
 ~overdriveButton.action_({|me|
 	if (me.value == 1,
-		{~k1_gain.value = 3.5; ~k2_tone.value = 0.7; ~k3_disThr.value = 0.3; ~k4_output_level.value = 1.2; ~distorsionButton.value = 0; ~fuzzButton.value = 0};
+		{
+			~k1_gain.value = 2; ~k2_tone.value = 0.7; ~k3_disThr.value = 0.3; ~k4_output_level.value = 0.8; ~distorsionButton.value = 0; ~fuzzButton.value = 0;
+			~gain = ~k1_gain.value; ~thr = ~k3_disThr.value; ~outGain = ~k4_output_level.value;
+			~outputSignal = ~quadraticFunction.value;
+		};
 )});
 
 ~distorsionButton.action_({|me|
 	if (me.value == 1,
-		{~k1_gain.value = 7; ~k2_tone.value = 1; ~k3_disThr.value = 0.5; ~k4_output_level.value = 0.8; ~overdriveButton.value = 0; ~fuzzButton.value = 0};
+		{
+			~k1_gain.value = 7; ~k2_tone.value = 1; ~k3_disThr.value = 0; ~k4_output_level.value = 0.8; ~overdriveButton.value = 0; ~fuzzButton.value = 0;
+			~gain = ~k1_gain.value; ~thr = ~k3_disThr.value; ~outGain = ~k4_output_level.value;
+			~outputSignal = ~quadraticFunction.value;
+		};
 )});
 
 ~fuzzButton.action_({|me|
 	if (me.value == 1,
-		{~k1_gain.value = 9; ~k2_tone.value = 1.2; ~k3_disThr.value = 0.8; ~k4_output_level.value = 1; ~overdriveButton.value = 0; ~distorsionButton.value = 0};
+		{
+			~k1_gain.value = 9; ~k2_tone.value = 1; ~k3_disThr.value = 0.8; ~k4_output_level.value = 0.5; ~overdriveButton.value = 0; ~distorsionButton.value = 0;
+			~gain = ~k1_gain.value; ~thr = ~k3_disThr.value; ~outGain = ~k4_output_level.value;
+			~outputSignal = ~quadraticFunction.value;
+		};
 )});
 
 )
