@@ -200,10 +200,6 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 ~k3_disThr.font = f;
 ~k4_output_level.font = f;
 
-)
-
-(
-
 ~k1_gain.action_({
 	arg knob;
 	~gain = knob.value;
@@ -254,10 +250,6 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 	~outputSignal = Shaper.ar(~myBuffer, ~inputSignal, 1, 0);
 });
 
-)
-
-(
-
 ~k3_disThr.action_({
 	arg knob;
 	~thr = knob.value;
@@ -307,11 +299,6 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 	// ~myBuffer.plot;
 	~outputSignal = Shaper.ar(~myBuffer, ~inputSignal, 1, 0);
 });
-
-)
-
-
-(
 
 ~k4_output_level.action_({
 	arg knob;
@@ -368,30 +355,47 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 // Styles buttons
 (
 
-a = Button(w, Rect(30, 200, 160, 40))
+~overdriveButton = Button(w, Rect(30, 200, 160, 40))
         .states_([
             ["Steve Ray Vaughan
 (Overdrive)", Color.white, Color.new255(red: 169, green: 211, blue: 134, alpha: 255)],
             ["Steve Ray Vaughan
 (Overdrive)", Color.white, Color.new255(red: 47, green: 72, blue: 88, alpha: 255)],
         ]);
-a.font = f;
-b = Button(w, Rect(220, 200, 160, 40))
+~overdriveButton.font = f;
+
+~distorsionButton = Button(w, Rect(220, 200, 160, 40))
         .states_([
             ["AC/DC
 (Distorsion)", Color.white, Color.new255(red: 169, green: 211, blue: 134, alpha: 255)],
             ["AC/DC
 (Distorsion)", Color.white, Color.new255(red: 47, green: 72, blue: 88, alpha: 255)],
         ]);
-b.font = f;
-c = Button(w, Rect(410, 200, 160, 40))
+~distorsionButton.font = f;
+
+~fuzzButton = Button(w, Rect(410, 200, 160, 40))
         .states_([
             ["Matt Bellamy
 (Fuzz)", Color.white, Color.new255(red: 169, green: 211, blue: 134, alpha: 255)],
             ["Matt Bellamy
 (Fuzz)", Color.white, Color.new255(red: 47, green: 72, blue: 88, alpha: 255)],
         ]);
-c.font = f;
+~fuzzButton.font = f;
+
+~overdriveButton.action_({|me|
+	if (me.value == 1,
+		{~k1_gain.value = 3.5; ~k2_tone.value = 0.7; ~k3_disThr.value = 0.3; ~k4_output_level.value = 1.2; ~distorsionButton.value = 0; ~fuzzButton.value = 0};
+)});
+
+~distorsionButton.action_({|me|
+	if (me.value == 1,
+		{~k1_gain.value = 7; ~k2_tone.value = 1; ~k3_disThr.value = 0.5; ~k4_output_level.value = 0.8; ~overdriveButton.value = 0; ~fuzzButton.value = 0};
+)});
+
+~fuzzButton.action_({|me|
+	if (me.value == 1,
+		{~k1_gain.value = 9; ~k2_tone.value = 1.2; ~k3_disThr.value = 0.8; ~k4_output_level.value = 1; ~overdriveButton.value = 0; ~distorsionButton.value = 0};
+)});
 
 )
 
