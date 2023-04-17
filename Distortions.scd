@@ -8,26 +8,28 @@ s.reboot;
 ~gain = 1;
 ~thr = 1;
 ~outGain = 1.0;
+~freq = 1000;
+~tone = 1000;
+~rq = 2;
+~db = 10;
 
-// ~inputBus = Bus.audio(s);
-// ~outputBus = Bus.audio(s);
-// ~xyBus = Bus.audio(s);
 ~myBuffer = Buffer.alloc(s, 1024, 1);
 ~tf = Signal.newClear(513);
 
 // Hyperbolic tangent transfer function
 
 ~tanhFunction = {
-	~inputSignal = SinOsc.ar(10, mul:~inGain);
+	~inputSignal = SinOsc.ar(~freq, mul:~inGain);
 	// ~inputSignal = {SoundIn.ar(0, 1) * ~inGain};
 	(~gain * ~inputSignal).tanh * ~outGain;
+	// MidEQ.ar(in: (~gain * ~inputSignal).tanh * ~outGain, freq: ~tone, rq: ~rq, db: ~db);
 };
 
 // Quadratic transfer function
 
 ~quadraticFunction = {
 	// Link to the GeoGebra site: https://www.geogebra.org/m/x5bhsngv
-	~inputSignal = SinOsc.ar(10, mul:~inGain);
+	~inputSignal = SinOsc.ar(~freq, mul:~inGain);
 	// ~inputSignal = {SoundIn.ar(0, 1) * ~inGain};
 	// ~tf = Signal.newClear(513);
 	~tf.waveFill({arg x, old, i; 2*x-1}); // 0 < x_axis < 513    -1 < y_axis < 1
@@ -74,20 +76,16 @@ s.reboot;
 	~myBuffer.sendCollection(~tf.asWavetableNoWrap);
 	// ~myBuffer.plot;
 	Shaper.ar(~myBuffer, ~inputSignal, 1, 0);
+	// MidEQ.ar(in: Shaper.ar(~myBuffer, ~inputSignal, 1, 0), freq: ~tone, rq: ~rq, db: ~db);
 };
-/*
-{
-	Out.ar(~inputBus, ~inputSignal);
-	Out.ar(~outputBus, ~outputSignal);
-	Out.ar(~xyBus, [~inputSignal, ~outputSignal]);
-}.play;
-*/
+
 // Main window
 
 f = Font ("Kreon", 12);
-~wRect = Rect(left: 650, top: 150, width: 600, height: 600);
+~wRect = Rect(left: 650, top: 150, width: 600, height: 680);
 w = Window("Distorsion", ~wRect, false);
 ~wColor = Color.new255(red: 251, green: 236, blue: 136, alpha: 255);
+~wColor2 = Color.new255(red: 255, green: 165, blue: 0, alpha: 255);
 w.background = ~wColor;
 w.front;
 w.alwaysOnTop = true;
@@ -105,67 +103,92 @@ w.alwaysOnTop = true;
 ~outputBuffer = Buffer.alloc(s, 1024);
 ~xyBuffer = Buffer.alloc(s, 1024, 2);
 ~sound = {
-	~inputSignal = SinOsc.ar(10, mul:~inGain);
+	~inputSignal = SinOsc.ar(~freq, mul:~inGain);
 	// ~inputSignal = {SoundIn.ar(0, 1) * ~inGain};
 	~outputSignal = ~quadraticFunction.value;
+	// ~outputSignal = MidEQ.ar(in: ~quadraticFunction.value, freq: ~tone, rq: ~rq, db: ~db);
 	ScopeOut2.ar(~inputSignal, ~inputBuffer); // update input buffer
     ScopeOut2.ar(~outputSignal, ~outputBuffer); // update output buffer
 	ScopeOut2.ar([~inputSignal, ~outputSignal], ~xyBuffer); // update xy buffer
   }.play;
 
 //By using ScopeView, we need to use buffers and ScopeOut2 -> see ScopeView examples in the search section.
-~inputScope = ScopeView(w,Rect(30,400,186,176)).server = s;
+~inputScope = ScopeView(w,Rect(30,300,186,176)).server = s;
 ~inputScope.bufnum = ~inputBuffer.bufnum;
 ~inputScope.yZoom = 0.9;
 ~inputScope.start;
-~xyScope = ScopeView(w,Rect(222,400,156,176)).server = s;
+~xyScope = ScopeView(w,Rect(222,300,156,176)).server = s;
 ~xyScope.bufnum = ~xyBuffer.bufnum;
 ~xyScope.style = 2;
 ~xyScope.start;
-~outputScope = ScopeView(w,Rect(384,400,186,176)).server = s;
+~outputScope = ScopeView(w,Rect(384,300,186,176)).server = s;
 ~outputScope.bufnum = ~outputBuffer.bufnum;
 ~outputScope.yZoom = 0.9;
 ~outputScope.start;
 
-~inputScopeName = StaticText(w,Rect(53, 535, 140, 100))
+~inputScopeName = StaticText(w,Rect(53, 435, 140, 100))
 .string_("Clean waveform")
 .align_(\center)
 .font_(Font("Kreon", 12));
-~xyScopeName = StaticText(w,Rect(230, 535, 140, 100))
+~xyScopeName = StaticText(w,Rect(230, 435, 140, 100))
 .string_("Transfer function")
 .align_(\center)
 .font_(Font("Kreon", 12));
-~outputScopeName = StaticText(w,Rect(407, 535, 140, 100))
+~outputScopeName = StaticText(w,Rect(407, 435, 140, 100))
 .string_("Distorted waveform")
 .align_(\center)
 .font_(Font("Kreon", 12));
 
-/*
-~inputFreqScope = FreqScopeView(w, Rect(6, 300, 291, 200));
-~outputFreqScope = FreqScopeView(w, Rect(303, 300, 291, 200));
-~inputFreqScope.active_(true);
-~outputFreqScope.active_(true);
+~inputBus = Bus.audio(s);
+~outputBus = Bus.audio(s);
+{
+	~inputSignal = SinOsc.ar(~freq, mul:~inGain);
+	// ~inputSignal = {SoundIn.ar(0, 1) * ~inGain};
+	~outputSignal = ~quadraticFunction.value;
+	// ~outputSignal = MidEQ.ar(in: ~quadraticFunction.value, freq: ~tone, rq: ~rq, db: ~db);
+	Out.ar(~inputBus, ~inputSignal);
+	Out.ar(~outputBus, ~outputSignal);
+}.play(s);
+~inputFreqScope = FreqScopeView(w, Rect(30, 500, 266, 150));
+~outputFreqScope = FreqScopeView(w, Rect(304, 500, 266, 150));
 ~inputFreqScope.freqMode_(1);
 ~outputFreqScope.freqMode_(1);
+~inputFreqScope.dbRange_(120);
+~outputFreqScope.dbRange_(120);
 ~inputFreqScope.inBus_(~inputBus);
 ~outputFreqScope.inBus_(~outputBus);
+~inputFreqScope.active_(true);
+~outputFreqScope.active_(true);
+/*
 */
+~inputFreqScopeName = StaticText(w,Rect(93, 610, 140, 100))
+.string_("Clean spectrum")
+.align_(\center)
+.font_(Font("Kreon", 12));
+~outputFreqScopeName = StaticText(w,Rect(367, 610, 140, 100))
+.string_("Distorted spectrum")
+.align_(\center)
+.font_(Font("Kreon", 12));
 
 w.onClose = {(
 	~sound.stop;
-	~inputBuffer.free;
-	~outputBuffer.free;
-	~xyBuffer.free;
+	Buffer.freeAll(s);
 	~inputScope.stop;
 	~outputScope.stop;
 	~xyScope.stop;
+	~inputBus.free;
+	~outputBus.free;
+	~inputFreqScope.active_(false);
+	~outputFreqScope.active_(false);
+	~inputFreqScope.free;
+	~outputFreqScope.free;
 )};
 
 // Knobs
 
 i = ControlSpec.new(minval: 0.0, maxval: 10.0);
 g = ControlSpec.new(minval: 0.0, maxval: 10.0);
-t = ControlSpec.new(minval: 0.0, maxval: 1.0);
+t = ControlSpec.new(minval: 10, maxval: 22000);
 p = ControlSpec.new(minval: 0.0, maxval: 1.0);
 o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 ~k0_inGain = EZKnob(w, Rect(30, 95, 80, 80), "Input gain", i, initVal: 1, layout: 'vert2');
@@ -182,27 +205,38 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 ~k0_inGain.action_({
 	arg knob;
 	~inGain = knob.value;
-	~inputSignal = SinOsc.ar(10, mul:~inGain);
+	~inputSignal = SinOsc.ar(~freq, mul:~inGain);
 	// ~inputSignal = {SoundIn.ar(0, 1) * ~inGain};
 	~outputSignal = ~quadraticFunction.value;
+	// ~outputSignal = MidEQ.ar(in: ~quadraticFunction.value, freq: ~tone, rq: ~rq, db: ~db);
 });
 
 ~k1_gain.action_({
 	arg knob;
-	~gain = knob.value;
+	if((~dystTypeMenu.value != 2), {~gain = knob.value;}, {});
 	~outputSignal = ~quadraticFunction.value;
+	// ~outputSignal = MidEQ.ar(in: ~quadraticFunction.value, freq: ~tone, rq: ~rq, db: ~db);
+});
+
+~k2_tone.action_({
+	arg knob;
+	~tone = knob.value;
+	~outputSignal = ~quadraticFunction.value;
+	// ~outputSignal = MidEQ.ar(in: ~quadraticFunction.value, freq: ~tone, rq: ~rq, db: ~db);
 });
 
 ~k3_disThr.action_({
 	arg knob;
-	~thr = knob.value;
+	if((~dystTypeMenu.value == 1), {~thr = knob.value;}, {});
 	~outputSignal = ~quadraticFunction.value;
+	// ~outputSignal = MidEQ.ar(in: ~quadraticFunction.value, freq: ~tone, rq: ~rq, db: ~db);
 });
 
 ~k4_output_level.action_({
 	arg knob;
 	~outGain = knob.value;
 	~outputSignal = ~quadraticFunction.value;
+	// ~outputSignal = MidEQ.ar(in: ~quadraticFunction.value, freq: ~tone, rq: ~rq, db: ~db);
 });
 
 // Styles buttons
@@ -210,7 +244,7 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 ~overdriveButton = Button(w, Rect(30, 200, 160, 40))
         .states_([
             ["Steve Ray Vaughan
-(Overdrive)", Color.white, Color.new255(red: 169, green: 211, blue: 134, alpha: 255)],
+(Overdrive)", Color.white, Color.new255(red: 69, green: 111, blue: 34, alpha: 255)],
             ["Steve Ray Vaughan
 (Overdrive)", Color.white, Color.new255(red: 47, green: 72, blue: 88, alpha: 255)],
         ]);
@@ -219,7 +253,7 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 ~distorsionButton = Button(w, Rect(220, 200, 160, 40))
         .states_([
             ["AC/DC
-(Distorsion)", Color.white, Color.new255(red: 169, green: 211, blue: 134, alpha: 255)],
+(Distorsion)", Color.white, Color.new255(red: 69, green: 111, blue: 34, alpha: 255)],
             ["AC/DC
 (Distorsion)", Color.white, Color.new255(red: 47, green: 72, blue: 88, alpha: 255)],
         ]);
@@ -228,7 +262,7 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 ~fuzzButton = Button(w, Rect(410, 200, 160, 40))
         .states_([
             ["Matt Bellamy
-(Fuzz)", Color.white, Color.new255(red: 169, green: 211, blue: 134, alpha: 255)],
+(Fuzz)", Color.white, Color.new255(red: 69, green: 111, blue: 34, alpha: 255)],
             ["Matt Bellamy
 (Fuzz)", Color.white, Color.new255(red: 47, green: 72, blue: 88, alpha: 255)],
         ]);
@@ -237,48 +271,54 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 ~overdriveButton.action_({|me|
 	if (me.value == 1,
 		{
-			~k1_gain.value = 2; ~k2_tone.value = 0.7; ~k3_disThr.value = 0.3; ~k4_output_level.value = 0.8; ~distorsionButton.value = 0; ~fuzzButton.value = 0;
+			~k1_gain.value = 2; ~k2_tone.value = 500; ~k3_disThr.value = 0.3; ~k4_output_level.value = 0.8; ~distorsionButton.value = 0; ~fuzzButton.value = 0;
 			~gain = ~k1_gain.value; ~thr = ~k3_disThr.value; ~outGain = ~k4_output_level.value;
+			~dystTypeMenu.value = 1;
 			~outputSignal = ~quadraticFunction.value;
+			// ~outputSignal = MidEQ.ar(in: ~quadraticFunction.value, freq: ~tone, rq: ~rq, db: ~db);
 		};
 )});
 
 ~distorsionButton.action_({|me|
 	if (me.value == 1,
 		{
-			~k1_gain.value = 7; ~k2_tone.value = 1; ~k3_disThr.value = 0; ~k4_output_level.value = 0.8; ~overdriveButton.value = 0; ~fuzzButton.value = 0;
+			~k1_gain.value = 7; ~k2_tone.value = 1000; ~k3_disThr.value = 0; ~k4_output_level.value = 0.8; ~overdriveButton.value = 0; ~fuzzButton.value = 0;
 			~gain = ~k1_gain.value; ~thr = ~k3_disThr.value; ~outGain = ~k4_output_level.value;
+			~dystTypeMenu.value = 1;
 			~outputSignal = ~quadraticFunction.value;
+			// ~outputSignal = MidEQ.ar(in: ~quadraticFunction.value, freq: ~tone, rq: ~rq, db: ~db);
 		};
 )});
 
 ~fuzzButton.action_({|me|
 	if (me.value == 1,
 		{
-			~k1_gain.value = 9; ~k2_tone.value = 1; ~k3_disThr.value = 0.8; ~k4_output_level.value = 0.5; ~overdriveButton.value = 0; ~distorsionButton.value = 0;
+			~k1_gain.value = 9; ~k2_tone.value = 15000; ~k3_disThr.value = 0.8; ~k4_output_level.value = 0.5; ~overdriveButton.value = 0; ~distorsionButton.value = 0;
 			~gain = ~k1_gain.value; ~thr = ~k3_disThr.value; ~outGain = ~k4_output_level.value;
+			~dystTypeMenu.value = 1;
 			~outputSignal = ~quadraticFunction.value;
+			// ~outputSignal = MidEQ.ar(in: ~quadraticFunction.value, freq: ~tone, rq: ~rq, db: ~db);
 		};
 )});
 
-//Pop Up Menu - Distorsion Type
-
-~dystTypeMenu = EZPopUpMenu.new(w, Rect(366, 342, 205, 20), "CURVE TYPE", layout: \horz);
-~dystTypeMenu.addItem(\Quadratic, {"Quadratic". postln;});
-~dystTypeMenu.addItem(\Hyperbolic_tangent, {"Hyperbolic tangent". postln;});
-~dystTypeMenu.addItem(\item2, {"this is item 2". postln});
-~dystTypeMenu.addItem(\item4, {"this is item 4". postln});
-~dystTypeMenu.font_(Font("Kreon", 12));
-
 //Pop Up Menu - Input choice
 
-~inputMenu = EZPopUpMenu.new(w, Rect(29, 342, 200, 20), "INPUT SOURCE", layout: \horz);
+~inputMenu = EZPopUpMenu.new(w, Rect(29, 260, 200, 20), "INPUT SOURCE", layout: \horz);
 ~inputMenu.addItem(\Sinusoid, {"Sinusoid". postln});
 ~inputMenu.addItem(\Soundcard, {"Soundcard". postln});
 ~inputMenu.addItem(\Computer_mic, {"Computer_mic". postln});
 ~inputMenu.addItem(\Guitar_mp3, {"Guitar_mp3". postln});
 ~inputMenu.addItem(\Voice_mp3, {"Voice_mp3". postln});
 ~inputMenu.font_(Font("Kreon", 11));
+
+//Pop Up Menu - Distorsion Type
+
+~dystTypeMenu = EZPopUpMenu.new(w, Rect(366, 260, 205, 20), "CURVE TYPE", layout: \horz);
+~dystTypeMenu.addItem(\Linear, {"Linear". postln});
+~dystTypeMenu.addItem(\Quadratic, {"Quadratic". postln;});
+~dystTypeMenu.addItem(\Hyperbolic_tangent, {"Hyperbolic tangent". postln;});
+~dystTypeMenu.addItem(\item4, {"this is item 4". postln});
+~dystTypeMenu.font_(Font("Kreon", 12));
 
 // Curve button
 /*
@@ -291,5 +331,130 @@ THE CURVE", Color.white, Color.new255(red: 47, green: 72, blue: 88, alpha: 255)]
         ]);
 ~curve_button.font_(Font("Kreon", 8));
 */
+
+// Mode Buttons
+
+~tutorialButton = Button(w, Rect(35, 25, 100, 30));
+~tutorialButton.states_([
+	["Tutorial mode", Color.white, Color.new255(red: 69, green: 111, blue: 34, alpha: 255)],
+	["Tutorial mode", Color.white, Color.new255(red: 47, green: 72, blue: 88, alpha: 255)],
+]);
+~tutorialButton.action_({|butt|
+	// butt.value.postln;
+	if (butt.value==0,
+		{
+			w.background = ~wColor2;
+			~iCanDoItButton.value = 1;
+		},
+		{
+			w.background = ~wColor;
+			~iCanDoItButton.value = 0;
+			~tutorialw.front;
+			~inputMenu.replaceItemAt(0, \Guitar_mp3, {"Item 0  replaced".postln});
+			~inputMenu.replaceItemAt(1, \Voice_mp3, {"Item 1 replaced".postln});
+		};
+)});
+~tutorialButton.font = f;
+~tutorialw = Window("Tutorial mode", Rect(left: 650, top: 460, width: 600, height: 160), false);
+~tutorialw.background = Color.new255(red: 169, green: 211, blue: 134, alpha: 255);
+~tutorialw.alwaysOnTop = true;
+~tutorialText = StaticText(~tutorialw, Rect(left: 20, top: 0, width: 560, height: 120));
+~tutorialText.font_(Font("Kreon", 13));
+~tutorialText.string =
+"
+                                                                    TUTORIAL MODE
+• Choose one audio file from the 'Input Source' menu.
+• Switch between the three distorsion presets and change the parameters as you prefer.
+• When you feel comfortable, switch to the 'I can do it' mode and try to distort some of your own sounds! Have fun!";
+~gotItButton = Button(~tutorialw, Rect(275, 130, 50, 20));
+~gotItButton.states_([
+	["Got It"],
+	["Got It"],
+]);
+~gotItButton.action_({|butt|
+	// butt.value.postln;
+	if (butt.value==1,
+		{~tutorialw.close;};
+)});
+
+~iCanDoItButton = Button(w, Rect(455, 25, 100, 30))
+        .states_([
+            ["I can do it", Color.white, Color.new255(red: 69, green: 111, blue: 34, alpha: 255)],
+            ["I can do it", Color.white, Color.new255(red: 47, green: 72, blue: 88, alpha: 255)],
+        ]);
+~iCanDoItButton.font = f;
+~iCanDoItButton.value = 0;
+~iCanDoItButton.action_({|butt|
+	// butt.value.postln;
+	if (butt.value==1,
+	{
+			w.background = ~wColor2;
+			~tutorialButton.value = 0;
+			~inputMenu.replaceItemAt(0, \Computer_mic, {"Item 0  replaced".postln});
+			~inputMenu.replaceItemAt(1, \Soundcard, {"Item 1 replaced".postln});
+			~iCanDoItw.front;
+	},
+	{w.background = ~wColor; ~tutorialButton.value = 1};
+)});
+~iCanDoItw = Window("I can do it mode", Rect(left: 650, top: 460, width: 600, height: 160), false);
+~iCanDoItw.background = Color.new255(red: 169, green: 211, blue: 134, alpha: 255);
+~iCanDoItw.alwaysOnTop = true;
+~tutorialText = StaticText(~iCanDoItw, Rect(left: 20, top: 0, width: 560, height: 120));
+~tutorialText.font_(Font("Kreon", 13));
+~tutorialText.string =
+"
+                                                                   I CAN DO IT MODE
+• Choose one audio input from the 'Input Source' menu.
+• Start to play and adjust the parameters to reach the desired sound. Have fun!";
+~gotItButton2 = Button(~iCanDoItw, Rect(275, 130, 50, 20));
+~gotItButton2.states_([
+	["Got It"],
+	["Got It"],
+]);
+~gotItButton2.action_({|butt|
+	// butt.value.postln;
+	if (butt.value==1,
+		{~iCanDoItw.close;};
+)});
+
+// Window "Knob roles"
+
+~knobInfoButton = Button(w, Rect(30, 63, 25, 30))
+        .states_([
+            ["i", Color.white, Color.new255(red: 69, green: 111, blue: 34, alpha: 255)],
+            ["i", Color.white, Color.new255(red: 47, green: 72, blue: 88, alpha: 255)],
+        ]);
+~knobInfoButton.font = (Font("Kreon", 25));
+~knobInfoButton.action_({|butt|
+	// butt.value.postln;
+	if (butt.value==1,
+		{
+			// 7.postln;
+			~infow = Window("Knobs roles", Rect(left: 325, top: 500, width: 320, height: 200), false);
+			~infow.background = Color.new255(red: 169, green: 211, blue: 134, alpha: 255);
+			~infow.alwaysOnTop = true;
+			~infos = StaticText(~infow, Rect(left: 10, top: 0, width: 300, height: 170));
+			//~infos.allign = \top;
+			//~infos.font = Font("Kreon", 9);
+			~infos.string =
+			"• INPUT KNOB: set the desired input volume.
+• GAIN KNOB: this value represent the slope of the linear portion of the transfer function.
+• TONE KNOB: set the frequency filter that helps you to shape the desired sound. Set it at a low value if you want a mellower and bassy sound, set it high if you want a richer and full of highs sound.
+• HARSNESS KNOB: changes the shape of the quadratic portion of the transfer function. It's linked to the threashold where the linear part ends and the quadratic part starts:
+    0 --> only quadratic shape
+    1 --> only linear shape (clip)
+• OUTPUT KNOB: set the desired output volume.";
+			~infow.front;
+			~gotItButton = Button(~infow, Rect(135, 172, 50, 20));
+			~gotItButton.states_([
+				["Got It"],
+				["Got It"],
+			]);
+			~gotItButton.action_({|butt|
+				// butt.value.postln;
+				if (butt.value==1,
+					{~knobInfoButton.value = 0; ~infow.close;};
+		)})}
+)});
 
 )
