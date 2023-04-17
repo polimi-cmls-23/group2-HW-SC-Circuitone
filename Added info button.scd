@@ -294,12 +294,10 @@ m.font_(Font("Kreon", 12));
 //Pop Up Menu - Input choice
 (
 
-m = EZPopUpMenu.new(w, Rect(40, 342, 120, 40), "INPUT SOURCE", layout: \vert);
-m.addItem(\Soundcard, {"this is item 0". postln});
-m.addItem(\Computer_mic, {"this is item 1". postln});
-m.addItem(\Guitar_mp3, {"this is item 2". postln});
-m.addItem(\Voice_mp3, {"this is item 4". postln});
-m.font_(Font("Kreon", 11));
+~inputMenu = EZPopUpMenu.new(w, Rect(40, 342, 120, 40), "INPUT SOURCE", layout: \vert);
+~inputMenu.addItem(\Guitar_mp3, {"this is item 0". postln});
+~inputMenu.addItem(\Voice_mp3, {"this is item 1". postln});
+~inputMenu.font_(Font("Kreon", 11));
 
 )
 
@@ -321,10 +319,37 @@ m.font_(Font("Kreon", 11));
 		{
 			w.background = ~wColor;
 			~iCanDoItButton.value = 0;
+			~tutorialw.front;
+			~inputMenu.replaceItemAt(0, \Guitar_mp3, {"Item 0  replaced".postln});
+			~inputMenu.replaceItemAt(1, \Voice_mp3, {"Item 1 replaced".postln});
 		};
 )});
-
 ~tutorialButton.font = f;
+~tutorialw = Window("Tutorial mode", Rect(left: 650, top: 460, width: 600, height: 160), false);
+			~tutorialw.background = Color.new255(red: 169, green: 211, blue: 134, alpha: 255);
+			~tutorialw.alwaysOnTop = true;
+			~tutorialText = StaticText(~tutorialw, Rect(left: 20, top: 0, width: 560, height: 120));
+            ~tutorialText.font_(Font("Kreon", 13));
+			~tutorialText.string =
+"
+                                                                    TUTORIAL MODE
+
+• Choose one audio file from the 'Input Souce' menu.
+• Switch between the three distorsion presets and change the parameters as you prefer.
+• When you feel comfortable, switch to the 'I can do it' mode and try to distort some of your own sounds! Have fun!";
+
+~gotItButton = Button(~tutorialw, Rect(275, 130, 50, 20));
+			~gotItButton.states_([
+            ["Got It"],
+            ["Got It"],
+        ]);
+~gotItButton.action_({|butt|
+				butt.value.postln;
+				if (butt.value==1,
+					{~tutorialw.close;};
+		)});
+
+
 ~iCanDoItButton = Button(w, Rect(455, 25, 100, 30))
         .states_([
             ["I can do it", Color.white, Color.new255(red: 169, green: 211, blue: 134, alpha: 255)],
@@ -335,9 +360,36 @@ m.font_(Font("Kreon", 11));
 ~iCanDoItButton.action_({|butt|
 	butt.value.postln;
 	if (butt.value==1,
-	{w.background = ~wColor2; ~tutorialButton.value = 0; ~inputMenu.value = 0},
+	{
+			w.background = ~wColor2;
+			~tutorialButton.value = 0;
+			~inputMenu.replaceItemAt(0, \Computer_mic, {"Item 0  replaced".postln});
+			~inputMenu.replaceItemAt(1, \Soundcard, {"Item 1 replaced".postln});
+			~iCanDoItw.front;
+	},
 	{w.background = ~wColor; ~tutorialButton.value = 1};
 )});
+~iCanDoItw = Window("I can do it mode", Rect(left: 650, top: 460, width: 600, height: 160), false);
+			~iCanDoItw.background = Color.new255(red: 169, green: 211, blue: 134, alpha: 255);
+			~iCanDoItw.alwaysOnTop = true;
+			~tutorialText = StaticText(~iCanDoItw, Rect(left: 20, top: 0, width: 560, height: 120));
+            ~tutorialText.font_(Font("Kreon", 13));
+			~tutorialText.string =
+"
+                                                                   I CAN DO IT MODE
+
+• Choose one audio input from the 'Input Souce' menu.
+• Start to play and adjust the parameters to reach the desired sound. Have fun!";
+~gotItButton2 = Button(~iCanDoItw, Rect(275, 130, 50, 20));
+			~gotItButton2.states_([
+            ["Got It"],
+            ["Got It"],
+        ]);
+~gotItButton2.action_({|butt|
+				butt.value.postln;
+				if (butt.value==1,
+					{~iCanDoItw.close;};
+		)});
 )
 
 // Window "Knob roles"
