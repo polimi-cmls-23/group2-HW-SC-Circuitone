@@ -4,7 +4,7 @@ s.reboot;
 
 // General initializations
 
-~inGain = 1;
+~inGain = 1.0;
 ~gain = 1;
 ~thr = 1;
 ~outGain = 1.0;
@@ -15,16 +15,22 @@ s.reboot;
 
 ~myBuffer = Buffer.alloc(s, 1024, 1);
 ~tf = Signal.newClear(513);
+~myInBuffer = Buffer.alloc(s, 1024, 1);
+~inTf = Signal.newClear(513);
 
 // Hyperbolic tangent transfer function
 
 ~tanhFunction = {
+	// ~inputMenu.value = 1; // ################################################### da togliere
+	~inTf.waveFill({arg x, old, i; 2*x-1});
+	~inTf = ~inTf * ~inGain;
+	~myInBuffer.sendCollection(~inTf.asWavetableNoWrap);
 	if((~inputMenu.value == 0), {
-		~inputSignal = SinOsc.ar(~freq, mul:~inGain);
+		~gainedInputSignal = Shaper.ar(~myInBuffer, SinOsc.ar(~freq), 1, 0);
 		"Sin from tnah".postln;
 	}, {
 		if((~inputMenu.value == 1), {
-			~inputSignal = {SoundIn.ar(0, 1) * ~inGain};
+			~gainedInputSignal = Shaper.ar(~myInBuffer, SoundIn.ar(0, 1), 1, 0);
 			"Mic from tnah".postln;
 		}, {
 			"Sin*50 from tnah".postln;
@@ -34,46 +40,43 @@ s.reboot;
 	~tf = ~tf * ~gain;
 	~tf = ~tf.tanh;
 	~tf = ~tf * ~outGain;
-	// ~tf.plot;
 	~myBuffer.sendCollection(~tf.asWavetableNoWrap);
-	// ~myBuffer.plot;
-	Shaper.ar(~myBuffer, ~inputSignal, 1, 0);
-	// (~gain * ~inputSignal).tanh * ~outGain;
-	// MidEQ.ar(in: (~gain * ~inputSignal).tanh * ~outGain, freq: ~tone, rq: ~rq, db: ~db);
+	Shaper.ar(~myBuffer, ~gainedInputSignal, 1, 0);
+	// MidEQ.ar(in: Shaper.ar(~myBuffer, ~gainedInputSignal, 1, 0), freq: ~tone, rq: ~rq, db: ~db);
 };
 
 // Quadratic transfer function
 
 ~quadraticFunction = {
 	// Link to the GeoGebra site: https://www.geogebra.org/m/x5bhsngv
+	// ~inputMenu.value = 1; // ################################################### da togliere
+	~inTf.waveFill({arg x, old, i; 2*x-1});
+	~inTf = ~inTf * ~inGain;
+	~myInBuffer.sendCollection(~inTf.asWavetableNoWrap);
 	if((~inputMenu.value == 0), {
-		~inputSignal = SinOsc.ar(~freq, mul:~inGain);
-		"Sin from lin/quad".postln;
+		~gainedInputSignal = Shaper.ar(~myInBuffer, SinOsc.ar(~freq), 1, 0);
+		"Sin from tnah".postln;
 	}, {
 		if((~inputMenu.value == 1), {
-			~inputSignal = {SoundIn.ar(0, 1) * ~inGain};
-			"Mic from lin/quad".postln;
+			~gainedInputSignal = Shaper.ar(~myInBuffer, SoundIn.ar(0, 1), 1, 0);
+			"Mic from tnah".postln;
 		}, {
-			"Sin*50 from lin/quad".postln;
+			"Sin*50 from tnah".postln;
 		});
 	});
-	// ~tf = Signal.newClear(513);
 	~tf.waveFill({arg x, old, i; 2*x-1}); // 0 < x_axis < 513    -1 < y_axis < 1
 	~tf.waveFill({arg x, old, i;  //    0 < x < 1    -1 < old < 1    0 < i < 512
 		if((old>0),
 			{// positive
 				if((old<(~thr/~gain)),
 					{// linear
-						// ("linear pos"+"i ="+i).postln;
 						old*~gain
 					},
 					{if((old<((2-~thr)/~gain)),
 						{// quatratic
-							// ("quadratic pos"+"i ="+i).postln;
 							((((old-((2-~thr)/~gain)).squared)*~gain*~gain)/(4*(~thr-1)))+1
 						},
 						{// clip
-							// ("clip pos"+"i ="+i).postln;
 							1
 					})
 				})
@@ -81,16 +84,13 @@ s.reboot;
 			{// negative
 				if((old>((-1)*~thr/~gain)),
 					{// linear
-						// ("linear neg"+"i ="+i).postln;
 						old*~gain
 					},
 					{if((old>((~thr-2)/~gain)),
 						{// quatratic
-							// ("quadratic neg"+"i ="+i).postln;
 							((((old-((~thr-2)/~gain)).squared)*~gain*~gain)/(4*(1-~thr)))-1
 						},
 						{// clip
-							// ("clip neg"+"i ="+i).postln;
 							-1
 					})
 				})
@@ -98,10 +98,8 @@ s.reboot;
 		)
 	});
 	~tf = ~tf * ~outGain;
-	// ~tf.plot;
 	~myBuffer.sendCollection(~tf.asWavetableNoWrap);
-	// ~myBuffer.plot;
-	Shaper.ar(~myBuffer, ~inputSignal, 1, 0);
+	Shaper.ar(~myBuffer, ~gainedInputSignal, 1, 0);
 	// MidEQ.ar(in: Shaper.ar(~myBuffer, ~inputSignal, 1, 0), freq: ~tone, rq: ~rq, db: ~db);
 };
 
@@ -126,14 +124,6 @@ w.onClose = {(
 	~inputScope.stop;
 	~outputScope.stop;
 	~xyScope.stop;
-	/*
-	~inputBus.free;
-	~outputBus.free;
-	~inputFreqScope.active_(false);
-	~outputFreqScope.active_(false);
-	~inputFreqScope.free;
-	~outputFreqScope.free;
-	*/
 )};
 
 // Knobs
@@ -157,15 +147,19 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 ~k0_inGain.action_({
 	arg knob;
 	~inGain = knob.value;
+	// ~inputMenu.value = 1; // ################################################### da togliere
+	~inTf.waveFill({arg x, old, i; 2*x-1});
+	~inTf = ~inTf * ~inGain;
+	~myInBuffer.sendCollection(~inTf.asWavetableNoWrap);
 	if((~inputMenu.value == 0), {
-		~inputSignal = SinOsc.ar(~freq, mul:~inGain);
-		"Sin from inGain".postln;
+		~gainedInputSignal = Shaper.ar(~myInBuffer, SinOsc.ar(~freq), 1, 0);
+		"Sin from tnah".postln;
 	}, {
 		if((~inputMenu.value == 1), {
-			~inputSignal = {SoundIn.ar(0, 1) * ~inGain};
-			"Mic from inGain".postln;
+			~gainedInputSignal = Shaper.ar(~myInBuffer, SoundIn.ar(0, 1), 1, 0);
+			"Mic from tnah".postln;
 		}, {
-			"Sin*50 from inGain".postln;
+			"Sin*50 from tnah".postln;
 		});
 	});
 	if(((~dystTypeMenu.value == 1)||(~dystTypeMenu.value == 0)), {
@@ -340,7 +334,7 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 
 ~dystTypeMenu = EZPopUpMenu.new(w, Rect(366, 260, 205, 20), "CURVE TYPE", layout: \horz);
 ~dystTypeMenu.addItem(\Linear, {"Linear". postln; ~k3_disThr.doAction;});
-~dystTypeMenu.addItem(\Quadratic, {"Quadratic". postln;});
+~dystTypeMenu.addItem(\Quadratic, {"Quadratic". postln; ~k3_disThr.doAction;});
 ~dystTypeMenu.addItem(\Hyperbolic_tangent, {"Hyperbolic tangent". postln; ~k3_disThr.doAction;});
 ~dystTypeMenu.addItem(\item4, {"this is item 4". postln});
 ~dystTypeMenu.font_(Font("Kreon", 12));
@@ -364,15 +358,19 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 ~outputBuffer = Buffer.alloc(s, 1024);
 ~xyBuffer = Buffer.alloc(s, 1024, 2);
 ~sound = {
+	// ~inputMenu.value = 1; // ################################################### da togliere
+	~inTf.waveFill({arg x, old, i; 2*x-1});
+	~inTf = ~inTf * ~inGain;
+	~myInBuffer.sendCollection(~inTf.asWavetableNoWrap);
 	if((~inputMenu.value == 0), {
-		~inputSignal = SinOsc.ar(~freq, mul:~inGain);
-		"Sin from ~sound".postln;
+		~gainedInputSignal = Shaper.ar(~myInBuffer, SinOsc.ar(~freq), 1, 0);
+		"Sin from tnah".postln;
 	}, {
 		if((~inputMenu.value == 1), {
-			~inputSignal = {SoundIn.ar(0, 1) * ~inGain};
-			"Mic from ~sound".postln;
+			~gainedInputSignal = Shaper.ar(~myInBuffer, SoundIn.ar(0, 1), 1, 0);
+			"Mic from tnah".postln;
 		}, {
-			"Sin*50 from ~sound".postln;
+			"Sin*50 from tnah".postln;
 		});
 	});
 	if(((~dystTypeMenu.value == 1)||(~dystTypeMenu.value == 0)), {
@@ -386,10 +384,10 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 			~outputSignal = ~quadraticFunction.value;
 		});
 	});
-	ScopeOut2.ar(~inputSignal, ~inputBuffer); // update input buffer
+	ScopeOut2.ar(~gainedInputSignal, ~inputBuffer); // update input buffer
     ScopeOut2.ar(~outputSignal, ~outputBuffer); // update output buffer
-	ScopeOut2.ar([~inputSignal, ~outputSignal], ~xyBuffer); // update xy buffer
-  }.play;
+	ScopeOut2.ar([~gainedInputSignal, ~outputSignal], ~xyBuffer); // update xy buffer
+}.play;
 
 //By using ScopeView, we need to use buffers and ScopeOut2 -> see ScopeView examples in the search section.
 ~inputScope = ScopeView(w,Rect(30,300,186,176)).server = s;
@@ -417,37 +415,6 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 .string_("Distorted waveform")
 .align_(\center)
 .font_(Font("Kreon", 12));
-
-/*
-~inputBus = Bus.audio(s);
-~outputBus = Bus.audio(s);
-{
-	~inputSignal = SinOsc.ar(~freq, mul:~inGain);
-	// ~inputSignal = {SoundIn.ar(0, 1) * ~inGain};
-	~outputSignal = ~quadraticFunction.value;
-	// ~outputSignal = MidEQ.ar(in: ~quadraticFunction.value, freq: ~tone, rq: ~rq, db: ~db);
-	Out.ar(~inputBus, ~inputSignal);
-	Out.ar(~outputBus, ~outputSignal);
-}.play(s);
-~inputFreqScope = FreqScopeView(w, Rect(30, 500, 266, 150));
-~outputFreqScope = FreqScopeView(w, Rect(304, 500, 266, 150));
-~inputFreqScope.freqMode_(1);
-~outputFreqScope.freqMode_(1);
-~inputFreqScope.dbRange_(120);
-~outputFreqScope.dbRange_(120);
-~inputFreqScope.inBus_(~inputBus);
-~outputFreqScope.inBus_(~outputBus);
-~inputFreqScope.active_(true);
-~outputFreqScope.active_(true);
-~inputFreqScopeName = StaticText(w,Rect(93, 610, 140, 100))
-.string_("Clean spectrum")
-.align_(\center)
-.font_(Font("Kreon", 12));
-~outputFreqScopeName = StaticText(w,Rect(367, 610, 140, 100))
-.string_("Distorted spectrum")
-.align_(\center)
-.font_(Font("Kreon", 12));
-*/
 
 // Curve button
 /*
@@ -491,7 +458,8 @@ THE CURVE", Color.white, Color.new255(red: 47, green: 72, blue: 88, alpha: 255)]
 ~tutorialText.font_(Font("Kreon", 13));
 ~tutorialText.string =
 "
-                                                                    TUTORIAL MODE
+                                                       TUTORIAL MODE
+
 • Choose one audio file from the 'Input Source' menu.
 • Switch between the three distorsion presets and change the parameters as you prefer.
 • When you feel comfortable, switch to the 'I can do it' mode and try to distort some of your own sounds! Have fun!";
@@ -514,7 +482,6 @@ THE CURVE", Color.white, Color.new255(red: 47, green: 72, blue: 88, alpha: 255)]
 ~iCanDoItButton.font = f;
 ~iCanDoItButton.value = 0;
 ~iCanDoItButton.action_({|butt|
-	// butt.value.postln;
 	if (butt.value==1,
 	{
 			w.background = ~wColor2;
@@ -525,23 +492,23 @@ THE CURVE", Color.white, Color.new255(red: 47, green: 72, blue: 88, alpha: 255)]
 	},
 	{w.background = ~wColor; ~tutorialButton.value = 1};
 )});
-~iCanDoItw = Window("I can do it mode", Rect(left: 650, top: 460, width: 600, height: 160), false);
+~iCanDoItw = Window("I can do it mode", Rect(left: 650, top: 460, width: 600, height: 130), false);
 ~iCanDoItw.background = Color.new255(red: 169, green: 211, blue: 134, alpha: 255);
 ~iCanDoItw.alwaysOnTop = true;
-~tutorialText = StaticText(~iCanDoItw, Rect(left: 20, top: 0, width: 560, height: 120));
+~tutorialText = StaticText(~iCanDoItw, Rect(left: 20, top: 0, width: 560, height: 80));
 ~tutorialText.font_(Font("Kreon", 13));
 ~tutorialText.string =
 "
-                                                                   I CAN DO IT MODE
+                                                       I CAN DO IT MODE
+
 • Choose one audio input from the 'Input Source' menu.
 • Start to play and adjust the parameters to reach the desired sound. Have fun!";
-~gotItButton2 = Button(~iCanDoItw, Rect(275, 130, 50, 20));
+~gotItButton2 = Button(~iCanDoItw, Rect(275, 100, 50, 20));
 ~gotItButton2.states_([
 	["Got It"],
 	["Got It"],
 ]);
 ~gotItButton2.action_({|butt|
-	// butt.value.postln;
 	if (butt.value==1,
 		{~iCanDoItw.close;};
 )});
@@ -555,7 +522,6 @@ THE CURVE", Color.white, Color.new255(red: 47, green: 72, blue: 88, alpha: 255)]
         ]);
 ~knobInfoButton.font = (Font("Kreon", 25));
 ~knobInfoButton.action_({|butt|
-	// butt.value.postln;
 	if (butt.value==1,
 		{
 			// 7.postln;
@@ -580,7 +546,6 @@ THE CURVE", Color.white, Color.new255(red: 47, green: 72, blue: 88, alpha: 255)]
 				["Got It"],
 			]);
 			~gotItButton.action_({|butt|
-				// butt.value.postln;
 				if (butt.value==1,
 					{~knobInfoButton.value = 0; ~infow.close;};
 		)})}
