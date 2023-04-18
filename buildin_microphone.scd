@@ -1,10 +1,11 @@
-s.boot;
+s.reboot;
+
 
 (
 SynthDef(\micInput, {
     arg out=0;
-    var input = SoundIn.ar(0, 2);
-    Out.ar(out, input);
+    var input = SoundIn.ar(0, 2); // Capture the sound from the input device
+    Out.ar(out, input); // Route this audio to output bus
 }).add;
 )
 
@@ -14,7 +15,7 @@ s.scope; // open the Scope window
 
 
 ( var micInputSynth;
-micInputSynth = Synth(\micInput, [\out, 0]);
+micInputSynth = Synth(\micInput, [\out, 0]); // Route the audio to output bus 0
 )
 
 
@@ -26,6 +27,7 @@ SynthDef(\distortedMic, {
     Out.ar(out, input);
 }).add;
 )
+
 
 
 (
