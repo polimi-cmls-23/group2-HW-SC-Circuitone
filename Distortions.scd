@@ -146,6 +146,9 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 
 ~k0_inGain.action_({
 	arg knob;
+	~overdriveButton.value = 0;
+	~fuzzButton.value = 0;
+	~distorsionButton.value = 0;
 	~inGain = knob.value;
 	// ~inputMenu.value = 1; // ################################################### da togliere
 	~inTf.waveFill({arg x, old, i; 2*x-1});
@@ -177,6 +180,9 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 
 ~k1_gain.action_({
 	arg knob;
+	~overdriveButton.value = 0;
+	~fuzzButton.value = 0;
+	~distorsionButton.value = 0;
 	~gain = knob.value;
 	if(((~dystTypeMenu.value == 1)||(~dystTypeMenu.value == 0)), {
 		~outputSignal = ~quadraticFunction.value;
@@ -193,6 +199,9 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 
 ~k2_tone.action_({
 	arg knob;
+	~overdriveButton.value = 0;
+	~fuzzButton.value = 0;
+	~distorsionButton.value = 0;
 	~tone = knob.value;
 	if(((~dystTypeMenu.value == 1)||(~dystTypeMenu.value == 0)), {
 		~outputSignal = ~quadraticFunction.value;
@@ -209,6 +218,9 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 
 ~k3_disThr.action_({
 	arg knob;
+	~overdriveButton.value = 0;
+	~fuzzButton.value = 0;
+	~distorsionButton.value = 0;
 	if((~dystTypeMenu.value == 1), {~thr = knob.value;}, {
 		if(((~dystTypeMenu.value == 0)||(~dystTypeMenu.value == 2)), {knob.value = 1; ~thr = 1;}, {});
 	});
@@ -227,6 +239,9 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 
 ~k4_output_level.action_({
 	arg knob;
+	~overdriveButton.value = 0;
+	~fuzzButton.value = 0;
+	~distorsionButton.value = 0;
 	~outGain = knob.value;
 	if(((~dystTypeMenu.value == 1)||(~dystTypeMenu.value == 0)), {
 		~outputSignal = ~quadraticFunction.value;
@@ -416,18 +431,6 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 .align_(\center)
 .font_(Font("Kreon", 12));
 
-// Curve button
-/*
-~curve_button = Button(w, Rect(522, 338, 45, 30))
-        .states_([
-            ["SHOW ME
-THE CURVE", Color.white, Color.new255(red: 169, green: 211, blue: 134, alpha: 255)],
-            ["SHOW ME
-THE CURVE", Color.white, Color.new255(red: 47, green: 72, blue: 88, alpha: 255)],
-        ]);
-~curve_button.font_(Font("Kreon", 8));
-*/
-
 // Mode Buttons
 
 ~tutorialButton = Button(w, Rect(35, 25, 100, 30));
@@ -446,7 +449,7 @@ THE CURVE", Color.white, Color.new255(red: 47, green: 72, blue: 88, alpha: 255)]
 			w.background = ~wColor;
 			~iCanDoItButton.value = 0;
 			~tutorialw.front;
-			~inputMenu.replaceItemAt(0, \Guitar_mp3, {"Item 0  replaced".postln});
+			~inputMenu.replaceItemAt(0, \Guitar_mp3, {"Item 0 replaced".postln});
 			~inputMenu.replaceItemAt(1, \Voice_mp3, {"Item 1 replaced".postln});
 		};
 )});
