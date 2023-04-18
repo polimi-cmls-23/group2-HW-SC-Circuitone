@@ -12,6 +12,7 @@ s.reboot;
 ~tone = 1000;
 ~rq = 2;
 ~db = 10;
+~analog = 0;
 
 ~myBuffer = Buffer.alloc(s, 1024, 1);
 ~tf = Signal.newClear(513);
@@ -37,7 +38,17 @@ s.reboot;
 		});
 	});
 	~tf.waveFill({arg x, old, i; 2*x-1}); // 0 < x_axis < 513    -1 < y_axis < 1
-	~tf = ~tf * ~gain;
+	~tf.waveFill({arg x, old, i;  //    0 < x < 1    -1 < old < 1    0 < i < 512
+		if((old>0),
+			{// positive
+				old*(~gain+~analogPos)
+			},
+			{// negative
+				old*(~gain+~analogNeg)
+			}
+		)
+	});
+	// ~tf = ~tf * ~gain;
 	~tf = ~tf.tanh;
 	~tf = ~tf * ~outGain;
 	~myBuffer.sendCollection(~tf.asWavetableNoWrap);
@@ -68,13 +79,13 @@ s.reboot;
 	~tf.waveFill({arg x, old, i;  //    0 < x < 1    -1 < old < 1    0 < i < 512
 		if((old>0),
 			{// positive
-				if((old<(~thr/~gain)),
+				if((old<(~thr/(~gain+~analogPos))),
 					{// linear
-						old*~gain
+						old*(~gain+~analogPos)
 					},
-					{if((old<((2-~thr)/~gain)),
+					{if((old<((2-~thr)/(~gain+~analogPos))),
 						{// quatratic
-							((((old-((2-~thr)/~gain)).squared)*~gain*~gain)/(4*(~thr-1)))+1
+							((((old-((2-~thr)/(~gain+~analogPos))).squared)*(~gain+~analogPos)*(~gain+~analogPos))/(4*(~thr-1)))+1
 						},
 						{// clip
 							1
@@ -82,13 +93,13 @@ s.reboot;
 				})
 			},
 			{// negative
-				if((old>((-1)*~thr/~gain)),
+				if((old>((-1)*~thr/(~gain+~analogNeg))),
 					{// linear
-						old*~gain
+						old*(~gain+~analogNeg)
 					},
-					{if((old>((~thr-2)/~gain)),
+					{if((old>((~thr-2)/(~gain+~analogNeg))),
 						{// quatratic
-							((((old-((~thr-2)/~gain)).squared)*~gain*~gain)/(4*(1-~thr)))-1
+							((((old-((~thr-2)/(~gain+~analogNeg))).squared)*(~gain+~analogNeg)*(~gain+~analogNeg))/(4*(1-~thr)))-1
 						},
 						{// clip
 							-1
@@ -433,7 +444,7 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 
 // Mode Buttons
 
-~tutorialButton = Button(w, Rect(35, 25, 100, 30));
+~tutorialButton = Button(w, Rect(30, 25, 100, 30));
 ~tutorialButton.states_([
 	["Tutorial mode", Color.white, Color.new255(red: 69, green: 111, blue: 34, alpha: 255)],
 	["Tutorial mode", Color.white, Color.new255(red: 47, green: 72, blue: 88, alpha: 255)],
@@ -477,7 +488,7 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 		{~tutorialw.close;};
 )});
 
-~iCanDoItButton = Button(w, Rect(455, 25, 100, 30))
+~iCanDoItButton = Button(w, Rect(470, 25, 100, 30))
         .states_([
             ["I can do it", Color.white, Color.new255(red: 69, green: 111, blue: 34, alpha: 255)],
             ["I can do it", Color.white, Color.new255(red: 47, green: 72, blue: 88, alpha: 255)],
@@ -527,11 +538,10 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 ~knobInfoButton.action_({|butt|
 	if (butt.value==1,
 		{
-			// 7.postln;
-			~infow = Window("Knobs roles", Rect(left: 325, top: 500, width: 320, height: 200), false);
+			~infow = Window("Knobs roles", Rect(left: 325, top: 500, width: 320, height: 220), false);
 			~infow.background = Color.new255(red: 169, green: 211, blue: 134, alpha: 255);
 			~infow.alwaysOnTop = true;
-			~infos = StaticText(~infow, Rect(left: 10, top: 0, width: 300, height: 170));
+			~infos = StaticText(~infow, Rect(left: 10, top: 0, width: 300, height: 190));
 			//~infos.allign = \top;
 			//~infos.font = Font("Kreon", 9);
 			~infos.string =
@@ -541,9 +551,10 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 • HARSNESS KNOB: changes the shape of the quadratic portion of the transfer function. It's linked to the threashold where the linear part ends and the quadratic part starts:
     0 --> only quadratic shape
     1 --> only linear shape (clip)
-• OUTPUT KNOB: set the desired output volume.";
+• OUTPUT KNOB: set the desired output volume.
+• ANALOG BUTTON: introduce asymmetrical behaviour in the transfer function, typical of real analogue circuits.";
 			~infow.front;
-			~gotItButton = Button(~infow, Rect(135, 172, 50, 20));
+			~gotItButton = Button(~infow, Rect(135, 192, 50, 20));
 			~gotItButton.states_([
 				["Got It"],
 				["Got It"],
@@ -552,6 +563,29 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 				if (butt.value==1,
 					{~knobInfoButton.value = 0; ~infow.close;};
 		)})}
+)});
+
+~analogButton = Button(w, Rect(500, 63, 70, 30))
+        .states_([
+            ["Analog", Color.white, Color.new255(red: 69, green: 111, blue: 34, alpha: 255)],
+            ["Analog", Color.white, Color.new255(red: 47, green: 72, blue: 88, alpha: 255)],
+        ]);
+~analogButton.font = f;
+~analogButton.action_({|butt|
+	// ("analogButton:"+butt.value).postln;
+	if ((butt.value==1),
+		{
+			~analogPos = (1.0.rand.round(0.01)-1.0.rand.round(0.01))*0.1;
+			~analogNeg = (1.0.rand.round(0.01)-1.0.rand.round(0.01))*0.1;
+			~k0_inGain.doAction;
+			// ("Analog:"+~analog).postln;
+		},
+		{
+			~analogPos = 0;
+			~analogNeg = 0;
+			~k0_inGain.doAction;
+			// ("Analog:"+~analog).postln;
+		}
 )});
 
 )
