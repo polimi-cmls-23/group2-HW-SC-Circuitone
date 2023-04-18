@@ -8,7 +8,7 @@ s.reboot;
 ~gain = 1;
 ~thr = 1;
 ~outGain = 1.0;
-~freq = 1000;
+~freq = 100;
 ~tone = 1000;
 ~rq = 2;
 ~db = 10;
@@ -19,9 +19,26 @@ s.reboot;
 // Hyperbolic tangent transfer function
 
 ~tanhFunction = {
-	~inputSignal = SinOsc.ar(~freq, mul:~inGain);
-	// ~inputSignal = {SoundIn.ar(0, 1) * ~inGain};
-	(~gain * ~inputSignal).tanh * ~outGain;
+	if((~inputMenu.value == 0), {
+		~inputSignal = SinOsc.ar(~freq, mul:~inGain);
+		"Sin from tnah".postln;
+	}, {
+		if((~inputMenu.value == 1), {
+			~inputSignal = {SoundIn.ar(0, 1) * ~inGain};
+			"Mic from tnah".postln;
+		}, {
+			"Sin*50 from tnah".postln;
+		});
+	});
+	~tf.waveFill({arg x, old, i; 2*x-1}); // 0 < x_axis < 513    -1 < y_axis < 1
+	~tf = ~tf * ~gain;
+	~tf = ~tf.tanh;
+	~tf = ~tf * ~outGain;
+	// ~tf.plot;
+	~myBuffer.sendCollection(~tf.asWavetableNoWrap);
+	// ~myBuffer.plot;
+	Shaper.ar(~myBuffer, ~inputSignal, 1, 0);
+	// (~gain * ~inputSignal).tanh * ~outGain;
 	// MidEQ.ar(in: (~gain * ~inputSignal).tanh * ~outGain, freq: ~tone, rq: ~rq, db: ~db);
 };
 
@@ -29,8 +46,17 @@ s.reboot;
 
 ~quadraticFunction = {
 	// Link to the GeoGebra site: https://www.geogebra.org/m/x5bhsngv
-	~inputSignal = SinOsc.ar(~freq, mul:~inGain);
-	// ~inputSignal = {SoundIn.ar(0, 1) * ~inGain};
+	if((~inputMenu.value == 0), {
+		~inputSignal = SinOsc.ar(~freq, mul:~inGain);
+		"Sin from lin/quad".postln;
+	}, {
+		if((~inputMenu.value == 1), {
+			~inputSignal = {SoundIn.ar(0, 1) * ~inGain};
+			"Mic from lin/quad".postln;
+		}, {
+			"Sin*50 from lin/quad".postln;
+		});
+	});
 	// ~tf = Signal.newClear(513);
 	~tf.waveFill({arg x, old, i; 2*x-1}); // 0 < x_axis < 513    -1 < y_axis < 1
 	~tf.waveFill({arg x, old, i;  //    0 < x < 1    -1 < old < 1    0 < i < 512
@@ -82,7 +108,7 @@ s.reboot;
 // Main window
 
 f = Font ("Kreon", 12);
-~wRect = Rect(left: 650, top: 150, width: 600, height: 680);
+~wRect = Rect(left: 650, top: 150, width: 600, height: 500);
 w = Window("Distorsion", ~wRect, false);
 ~wColor = Color.new255(red: 251, green: 236, blue: 136, alpha: 255);
 ~wColor2 = Color.new255(red: 255, green: 165, blue: 0, alpha: 255);
@@ -94,94 +120,20 @@ w.alwaysOnTop = true;
 .align_(\center)
 .font_(Font("Kreon", 40));
 
-// Wave scopes
-
-// For the following code I followed this example: https://subscription.packtpub.com/book/application-development/9781783289677/1/ch01lvl1sec09/scoping-signals and this updated version: https://gist.github.com/gusano/e961e0ce67b09fea80e9
-
-// create two buffer in order to plot with ScopeOut2 and ScopeView.
-~inputBuffer = Buffer.alloc(s, 1024);
-~outputBuffer = Buffer.alloc(s, 1024);
-~xyBuffer = Buffer.alloc(s, 1024, 2);
-~sound = {
-	~inputSignal = SinOsc.ar(~freq, mul:~inGain);
-	// ~inputSignal = {SoundIn.ar(0, 1) * ~inGain};
-	~outputSignal = ~quadraticFunction.value;
-	// ~outputSignal = MidEQ.ar(in: ~quadraticFunction.value, freq: ~tone, rq: ~rq, db: ~db);
-	ScopeOut2.ar(~inputSignal, ~inputBuffer); // update input buffer
-    ScopeOut2.ar(~outputSignal, ~outputBuffer); // update output buffer
-	ScopeOut2.ar([~inputSignal, ~outputSignal], ~xyBuffer); // update xy buffer
-  }.play;
-
-//By using ScopeView, we need to use buffers and ScopeOut2 -> see ScopeView examples in the search section.
-~inputScope = ScopeView(w,Rect(30,300,186,176)).server = s;
-~inputScope.bufnum = ~inputBuffer.bufnum;
-~inputScope.yZoom = 0.9;
-~inputScope.start;
-~xyScope = ScopeView(w,Rect(222,300,156,176)).server = s;
-~xyScope.bufnum = ~xyBuffer.bufnum;
-~xyScope.style = 2;
-~xyScope.start;
-~outputScope = ScopeView(w,Rect(384,300,186,176)).server = s;
-~outputScope.bufnum = ~outputBuffer.bufnum;
-~outputScope.yZoom = 0.9;
-~outputScope.start;
-
-~inputScopeName = StaticText(w,Rect(53, 435, 140, 100))
-.string_("Clean waveform")
-.align_(\center)
-.font_(Font("Kreon", 12));
-~xyScopeName = StaticText(w,Rect(230, 435, 140, 100))
-.string_("Transfer function")
-.align_(\center)
-.font_(Font("Kreon", 12));
-~outputScopeName = StaticText(w,Rect(407, 435, 140, 100))
-.string_("Distorted waveform")
-.align_(\center)
-.font_(Font("Kreon", 12));
-
-~inputBus = Bus.audio(s);
-~outputBus = Bus.audio(s);
-{
-	~inputSignal = SinOsc.ar(~freq, mul:~inGain);
-	// ~inputSignal = {SoundIn.ar(0, 1) * ~inGain};
-	~outputSignal = ~quadraticFunction.value;
-	// ~outputSignal = MidEQ.ar(in: ~quadraticFunction.value, freq: ~tone, rq: ~rq, db: ~db);
-	Out.ar(~inputBus, ~inputSignal);
-	Out.ar(~outputBus, ~outputSignal);
-}.play(s);
-~inputFreqScope = FreqScopeView(w, Rect(30, 500, 266, 150));
-~outputFreqScope = FreqScopeView(w, Rect(304, 500, 266, 150));
-~inputFreqScope.freqMode_(1);
-~outputFreqScope.freqMode_(1);
-~inputFreqScope.dbRange_(120);
-~outputFreqScope.dbRange_(120);
-~inputFreqScope.inBus_(~inputBus);
-~outputFreqScope.inBus_(~outputBus);
-~inputFreqScope.active_(true);
-~outputFreqScope.active_(true);
-/*
-*/
-~inputFreqScopeName = StaticText(w,Rect(93, 610, 140, 100))
-.string_("Clean spectrum")
-.align_(\center)
-.font_(Font("Kreon", 12));
-~outputFreqScopeName = StaticText(w,Rect(367, 610, 140, 100))
-.string_("Distorted spectrum")
-.align_(\center)
-.font_(Font("Kreon", 12));
-
 w.onClose = {(
 	~sound.stop;
 	Buffer.freeAll(s);
 	~inputScope.stop;
 	~outputScope.stop;
 	~xyScope.stop;
+	/*
 	~inputBus.free;
 	~outputBus.free;
 	~inputFreqScope.active_(false);
 	~outputFreqScope.active_(false);
 	~inputFreqScope.free;
 	~outputFreqScope.free;
+	*/
 )};
 
 // Knobs
@@ -205,38 +157,94 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 ~k0_inGain.action_({
 	arg knob;
 	~inGain = knob.value;
-	~inputSignal = SinOsc.ar(~freq, mul:~inGain);
-	// ~inputSignal = {SoundIn.ar(0, 1) * ~inGain};
-	~outputSignal = ~quadraticFunction.value;
-	// ~outputSignal = MidEQ.ar(in: ~quadraticFunction.value, freq: ~tone, rq: ~rq, db: ~db);
+	if((~inputMenu.value == 0), {
+		~inputSignal = SinOsc.ar(~freq, mul:~inGain);
+		"Sin from inGain".postln;
+	}, {
+		if((~inputMenu.value == 1), {
+			~inputSignal = {SoundIn.ar(0, 1) * ~inGain};
+			"Mic from inGain".postln;
+		}, {
+			"Sin*50 from inGain".postln;
+		});
+	});
+	if(((~dystTypeMenu.value == 1)||(~dystTypeMenu.value == 0)), {
+		~outputSignal = ~quadraticFunction.value;
+		// ~outputSignal = MidEQ.ar(in: ~quadraticFunction.value, freq: ~tone, rq: ~rq, db: ~db);
+	}, {
+		if((~dystTypeMenu.value == 2), {
+			~outputSignal = ~tanhFunction.value;
+			// ~outputSignal = MidEQ.ar(in: ~~tanhFunction.value, freq: ~tone, rq: ~rq, db: ~db);
+		}, {
+			~outputSignal = ~quadraticFunction.value;
+		});
+	});
 });
 
 ~k1_gain.action_({
 	arg knob;
-	if((~dystTypeMenu.value != 2), {~gain = knob.value;}, {});
-	~outputSignal = ~quadraticFunction.value;
-	// ~outputSignal = MidEQ.ar(in: ~quadraticFunction.value, freq: ~tone, rq: ~rq, db: ~db);
+	~gain = knob.value;
+	if(((~dystTypeMenu.value == 1)||(~dystTypeMenu.value == 0)), {
+		~outputSignal = ~quadraticFunction.value;
+		// ~outputSignal = MidEQ.ar(in: ~quadraticFunction.value, freq: ~tone, rq: ~rq, db: ~db);
+	}, {
+		if((~dystTypeMenu.value == 2), {
+			~outputSignal = ~tanhFunction.value;
+			// ~outputSignal = MidEQ.ar(in: ~~tanhFunction.value, freq: ~tone, rq: ~rq, db: ~db);
+		}, {
+			~outputSignal = ~quadraticFunction.value;
+		});
+	});
 });
 
 ~k2_tone.action_({
 	arg knob;
 	~tone = knob.value;
-	~outputSignal = ~quadraticFunction.value;
-	// ~outputSignal = MidEQ.ar(in: ~quadraticFunction.value, freq: ~tone, rq: ~rq, db: ~db);
+	if(((~dystTypeMenu.value == 1)||(~dystTypeMenu.value == 0)), {
+		~outputSignal = ~quadraticFunction.value;
+		// ~outputSignal = MidEQ.ar(in: ~quadraticFunction.value, freq: ~tone, rq: ~rq, db: ~db);
+	}, {
+		if((~dystTypeMenu.value == 2), {
+			~outputSignal = ~tanhFunction.value;
+			// ~outputSignal = MidEQ.ar(in: ~~tanhFunction.value, freq: ~tone, rq: ~rq, db: ~db);
+		}, {
+			~outputSignal = ~quadraticFunction.value;
+		});
+	});
 });
 
 ~k3_disThr.action_({
 	arg knob;
-	if((~dystTypeMenu.value == 1), {~thr = knob.value;}, {});
-	~outputSignal = ~quadraticFunction.value;
-	// ~outputSignal = MidEQ.ar(in: ~quadraticFunction.value, freq: ~tone, rq: ~rq, db: ~db);
+	if((~dystTypeMenu.value == 1), {~thr = knob.value;}, {
+		if(((~dystTypeMenu.value == 0)||(~dystTypeMenu.value == 2)), {knob.value = 1; ~thr = 1;}, {});
+	});
+	if(((~dystTypeMenu.value == 1)||(~dystTypeMenu.value == 0)), {
+		~outputSignal = ~quadraticFunction.value;
+		// ~outputSignal = MidEQ.ar(in: ~quadraticFunction.value, freq: ~tone, rq: ~rq, db: ~db);
+	}, {
+		if((~dystTypeMenu.value == 2), {
+			~outputSignal = ~tanhFunction.value;
+			// ~outputSignal = MidEQ.ar(in: ~~tanhFunction.value, freq: ~tone, rq: ~rq, db: ~db);
+		}, {
+			~outputSignal = ~quadraticFunction.value;
+		});
+	});
 });
 
 ~k4_output_level.action_({
 	arg knob;
 	~outGain = knob.value;
-	~outputSignal = ~quadraticFunction.value;
-	// ~outputSignal = MidEQ.ar(in: ~quadraticFunction.value, freq: ~tone, rq: ~rq, db: ~db);
+	if(((~dystTypeMenu.value == 1)||(~dystTypeMenu.value == 0)), {
+		~outputSignal = ~quadraticFunction.value;
+		// ~outputSignal = MidEQ.ar(in: ~quadraticFunction.value, freq: ~tone, rq: ~rq, db: ~db);
+	}, {
+		if((~dystTypeMenu.value == 2), {
+			~outputSignal = ~tanhFunction.value;
+			// ~outputSignal = MidEQ.ar(in: ~~tanhFunction.value, freq: ~tone, rq: ~rq, db: ~db);
+		}, {
+			~outputSignal = ~quadraticFunction.value;
+		});
+	});
 });
 
 // Styles buttons
@@ -274,8 +282,17 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 			~k1_gain.value = 2; ~k2_tone.value = 500; ~k3_disThr.value = 0.3; ~k4_output_level.value = 0.8; ~distorsionButton.value = 0; ~fuzzButton.value = 0;
 			~gain = ~k1_gain.value; ~thr = ~k3_disThr.value; ~outGain = ~k4_output_level.value;
 			~dystTypeMenu.value = 1;
-			~outputSignal = ~quadraticFunction.value;
-			// ~outputSignal = MidEQ.ar(in: ~quadraticFunction.value, freq: ~tone, rq: ~rq, db: ~db);
+			if(((~dystTypeMenu.value == 1)||(~dystTypeMenu.value == 0)), {
+				~outputSignal = ~quadraticFunction.value;
+				// ~outputSignal = MidEQ.ar(in: ~quadraticFunction.value, freq: ~tone, rq: ~rq, db: ~db);
+			}, {
+				if((~dystTypeMenu.value == 2), {
+					~outputSignal = ~tanhFunction.value;
+					// ~outputSignal = MidEQ.ar(in: ~~tanhFunction.value, freq: ~tone, rq: ~rq, db: ~db);
+				}, {
+					~outputSignal = ~quadraticFunction.value;
+				});
+			});
 		};
 )});
 
@@ -285,8 +302,17 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 			~k1_gain.value = 7; ~k2_tone.value = 1000; ~k3_disThr.value = 0; ~k4_output_level.value = 0.8; ~overdriveButton.value = 0; ~fuzzButton.value = 0;
 			~gain = ~k1_gain.value; ~thr = ~k3_disThr.value; ~outGain = ~k4_output_level.value;
 			~dystTypeMenu.value = 1;
-			~outputSignal = ~quadraticFunction.value;
-			// ~outputSignal = MidEQ.ar(in: ~quadraticFunction.value, freq: ~tone, rq: ~rq, db: ~db);
+			if(((~dystTypeMenu.value == 1)||(~dystTypeMenu.value == 0)), {
+				~outputSignal = ~quadraticFunction.value;
+				// ~outputSignal = MidEQ.ar(in: ~quadraticFunction.value, freq: ~tone, rq: ~rq, db: ~db);
+			}, {
+				if((~dystTypeMenu.value == 2), {
+					~outputSignal = ~tanhFunction.value;
+					// ~outputSignal = MidEQ.ar(in: ~~tanhFunction.value, freq: ~tone, rq: ~rq, db: ~db);
+				}, {
+					~outputSignal = ~quadraticFunction.value;
+				});
+			});
 		};
 )});
 
@@ -296,29 +322,132 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 			~k1_gain.value = 9; ~k2_tone.value = 15000; ~k3_disThr.value = 0.8; ~k4_output_level.value = 0.5; ~overdriveButton.value = 0; ~distorsionButton.value = 0;
 			~gain = ~k1_gain.value; ~thr = ~k3_disThr.value; ~outGain = ~k4_output_level.value;
 			~dystTypeMenu.value = 1;
-			~outputSignal = ~quadraticFunction.value;
-			// ~outputSignal = MidEQ.ar(in: ~quadraticFunction.value, freq: ~tone, rq: ~rq, db: ~db);
+			if(((~dystTypeMenu.value == 1)||(~dystTypeMenu.value == 0)), {
+				~outputSignal = ~quadraticFunction.value;
+				// ~outputSignal = MidEQ.ar(in: ~quadraticFunction.value, freq: ~tone, rq: ~rq, db: ~db);
+			}, {
+				if((~dystTypeMenu.value == 2), {
+					~outputSignal = ~tanhFunction.value;
+					// ~outputSignal = MidEQ.ar(in: ~~tanhFunction.value, freq: ~tone, rq: ~rq, db: ~db);
+				}, {
+					~outputSignal = ~quadraticFunction.value;
+				});
+			});
 		};
 )});
-
-//Pop Up Menu - Input choice
-
-~inputMenu = EZPopUpMenu.new(w, Rect(29, 260, 200, 20), "INPUT SOURCE", layout: \horz);
-~inputMenu.addItem(\Sinusoid, {"Sinusoid". postln});
-~inputMenu.addItem(\Soundcard, {"Soundcard". postln});
-~inputMenu.addItem(\Computer_mic, {"Computer_mic". postln});
-~inputMenu.addItem(\Guitar_mp3, {"Guitar_mp3". postln});
-~inputMenu.addItem(\Voice_mp3, {"Voice_mp3". postln});
-~inputMenu.font_(Font("Kreon", 11));
 
 //Pop Up Menu - Distorsion Type
 
 ~dystTypeMenu = EZPopUpMenu.new(w, Rect(366, 260, 205, 20), "CURVE TYPE", layout: \horz);
-~dystTypeMenu.addItem(\Linear, {"Linear". postln});
+~dystTypeMenu.addItem(\Linear, {"Linear". postln; ~k3_disThr.doAction;});
 ~dystTypeMenu.addItem(\Quadratic, {"Quadratic". postln;});
-~dystTypeMenu.addItem(\Hyperbolic_tangent, {"Hyperbolic tangent". postln;});
+~dystTypeMenu.addItem(\Hyperbolic_tangent, {"Hyperbolic tangent". postln; ~k3_disThr.doAction;});
 ~dystTypeMenu.addItem(\item4, {"this is item 4". postln});
 ~dystTypeMenu.font_(Font("Kreon", 12));
+
+//Pop Up Menu - Input choice
+
+~inputMenu = EZPopUpMenu.new(w, Rect(29, 260, 200, 20), "INPUT SOURCE", layout: \horz);
+~inputMenu.addItem(\Sinusoid, {"Sinusoid". postln; ~k0_inGain.doAction;});
+~inputMenu.addItem(\Computer_mic, {"Computer_mic". postln; ~k0_inGain.doAction;});
+~inputMenu.addItem(\Soundcard, {"Soundcard". postln; ~k0_inGain.doAction;});
+~inputMenu.addItem(\Guitar_mp3, {"Guitar_mp3". postln; ~k0_inGain.doAction;});
+~inputMenu.addItem(\Voice_mp3, {"Voice_mp3". postln; ~k0_inGain.doAction;});
+~inputMenu.font_(Font("Kreon", 11));
+
+// Wave scopes
+
+// For the following code I followed this example: https://subscription.packtpub.com/book/application-development/9781783289677/1/ch01lvl1sec09/scoping-signals and this updated version: https://gist.github.com/gusano/e961e0ce67b09fea80e9
+
+// create two buffer in order to plot with ScopeOut2 and ScopeView.
+~inputBuffer = Buffer.alloc(s, 1024);
+~outputBuffer = Buffer.alloc(s, 1024);
+~xyBuffer = Buffer.alloc(s, 1024, 2);
+~sound = {
+	if((~inputMenu.value == 0), {
+		~inputSignal = SinOsc.ar(~freq, mul:~inGain);
+		"Sin from ~sound".postln;
+	}, {
+		if((~inputMenu.value == 1), {
+			~inputSignal = {SoundIn.ar(0, 1) * ~inGain};
+			"Mic from ~sound".postln;
+		}, {
+			"Sin*50 from ~sound".postln;
+		});
+	});
+	if(((~dystTypeMenu.value == 1)||(~dystTypeMenu.value == 0)), {
+		~outputSignal = ~quadraticFunction.value;
+		// ~outputSignal = MidEQ.ar(in: ~quadraticFunction.value, freq: ~tone, rq: ~rq, db: ~db);
+	}, {
+		if((~dystTypeMenu.value == 2), {
+			~outputSignal = ~tanhFunction.value;
+			// ~outputSignal = MidEQ.ar(in: ~~tanhFunction.value, freq: ~tone, rq: ~rq, db: ~db);
+		}, {
+			~outputSignal = ~quadraticFunction.value;
+		});
+	});
+	ScopeOut2.ar(~inputSignal, ~inputBuffer); // update input buffer
+    ScopeOut2.ar(~outputSignal, ~outputBuffer); // update output buffer
+	ScopeOut2.ar([~inputSignal, ~outputSignal], ~xyBuffer); // update xy buffer
+  }.play;
+
+//By using ScopeView, we need to use buffers and ScopeOut2 -> see ScopeView examples in the search section.
+~inputScope = ScopeView(w,Rect(30,300,186,176)).server = s;
+~inputScope.bufnum = ~inputBuffer.bufnum;
+~inputScope.yZoom = 0.9;
+~inputScope.start;
+~xyScope = ScopeView(w,Rect(222,300,156,176)).server = s;
+~xyScope.bufnum = ~xyBuffer.bufnum;
+~xyScope.style = 2;
+~xyScope.start;
+~outputScope = ScopeView(w,Rect(384,300,186,176)).server = s;
+~outputScope.bufnum = ~outputBuffer.bufnum;
+~outputScope.yZoom = 0.9;
+~outputScope.start;
+
+~inputScopeName = StaticText(w,Rect(53, 435, 140, 100))
+.string_("Clean waveform")
+.align_(\center)
+.font_(Font("Kreon", 12));
+~xyScopeName = StaticText(w,Rect(230, 435, 140, 100))
+.string_("Transfer function")
+.align_(\center)
+.font_(Font("Kreon", 12));
+~outputScopeName = StaticText(w,Rect(407, 435, 140, 100))
+.string_("Distorted waveform")
+.align_(\center)
+.font_(Font("Kreon", 12));
+
+/*
+~inputBus = Bus.audio(s);
+~outputBus = Bus.audio(s);
+{
+	~inputSignal = SinOsc.ar(~freq, mul:~inGain);
+	// ~inputSignal = {SoundIn.ar(0, 1) * ~inGain};
+	~outputSignal = ~quadraticFunction.value;
+	// ~outputSignal = MidEQ.ar(in: ~quadraticFunction.value, freq: ~tone, rq: ~rq, db: ~db);
+	Out.ar(~inputBus, ~inputSignal);
+	Out.ar(~outputBus, ~outputSignal);
+}.play(s);
+~inputFreqScope = FreqScopeView(w, Rect(30, 500, 266, 150));
+~outputFreqScope = FreqScopeView(w, Rect(304, 500, 266, 150));
+~inputFreqScope.freqMode_(1);
+~outputFreqScope.freqMode_(1);
+~inputFreqScope.dbRange_(120);
+~outputFreqScope.dbRange_(120);
+~inputFreqScope.inBus_(~inputBus);
+~outputFreqScope.inBus_(~outputBus);
+~inputFreqScope.active_(true);
+~outputFreqScope.active_(true);
+~inputFreqScopeName = StaticText(w,Rect(93, 610, 140, 100))
+.string_("Clean spectrum")
+.align_(\center)
+.font_(Font("Kreon", 12));
+~outputFreqScopeName = StaticText(w,Rect(367, 610, 140, 100))
+.string_("Distorted spectrum")
+.align_(\center)
+.font_(Font("Kreon", 12));
+*/
 
 // Curve button
 /*
