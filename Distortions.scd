@@ -9,7 +9,7 @@ s.reboot;
 ~thr = 1;
 ~outGain = 1.0;
 ~freq = 100;
-~tone = 1000;
+~tone = 100;
 ~rq = 2;
 ~db = 10;
 ~analogPos = 0;
@@ -20,6 +20,23 @@ s.reboot;
 ~myInBuffer = Buffer.alloc(s, 1024, 1);
 ~inTf = Signal.newClear(513);
 
+// Input selection function
+
+~inputSelectonFunction = {
+	if((~inputMenu.value == 0), {
+		"Sin from tnah".postln;
+		SinOsc.ar(~freq);
+	}, {
+		if((~inputMenu.value == 1), {
+			"Mic from tnah".postln;
+			SoundIn.ar(0, 1);
+		}, {
+			"Sin*50 from tnah".postln;
+			SinOsc.ar(~freq*100);
+		});
+	});
+};
+
 // Hyperbolic tangent transfer function
 
 ~tanhFunction = {
@@ -27,17 +44,7 @@ s.reboot;
 	~inTf.waveFill({arg x, old, i; 2*x-1});
 	~inTf = ~inTf * ~inGain;
 	~myInBuffer.sendCollection(~inTf.asWavetableNoWrap);
-	if((~inputMenu.value == 0), {
-		~gainedInputSignal = Shaper.ar(~myInBuffer, SinOsc.ar(~freq), 1, 0);
-		"Sin from tnah".postln;
-	}, {
-		if((~inputMenu.value == 1), {
-			~gainedInputSignal = Shaper.ar(~myInBuffer, SoundIn.ar(0, 1), 1, 0);
-			"Mic from tnah".postln;
-		}, {
-			"Sin*50 from tnah".postln;
-		});
-	});
+	~gainedInputSignal = Shaper.ar(~myInBuffer, ~inputSelectonFunction.value, 1, 0);
 	~tf.waveFill({arg x, old, i; 2*x-1}); // 0 < x_axis < 513    -1 < y_axis < 1
 	~tf.waveFill({arg x, old, i;  //    0 < x < 1    -1 < old < 1    0 < i < 512
 		if((old>0),
@@ -65,19 +72,7 @@ s.reboot;
 	~inTf.waveFill({arg x, old, i; 2*x-1});
 	~inTf = ~inTf * ~inGain;
 	~myInBuffer.sendCollection(~inTf.asWavetableNoWrap);
-	if((~inputMenu.value == 0), {
-		~gainedInputSignal = Shaper.ar(~myInBuffer, SinOsc.ar(~freq), 1, 0);
-		"Sin from tnah".postln;
-	}, {
-		if((~inputMenu.value == 1), {
-			~gainedInputSignal = Shaper.ar(~myInBuffer, SoundIn.ar(0, 1), 1, 0);
-			"Mic from tnah".postln;
-		}, {
-			"Sin*50 from tnah".postln;
-		});
-	});
-	("AnalogPos:"+~analogPos).postln;
-	("AnalogNeg:"+~analogNeg).postln;
+	~gainedInputSignal = Shaper.ar(~myInBuffer, ~inputSelectonFunction.value, 1, 0);
 	~tf.waveFill({arg x, old, i; 2*x-1}); // 0 < x_axis < 513    -1 < y_axis < 1
 	~tf.waveFill({arg x, old, i;  //    0 < x < 1    -1 < old < 1    0 < i < 512
 		if((old>0),
@@ -194,17 +189,7 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 	~inTf.waveFill({arg x, old, i; 2*x-1});
 	~inTf = ~inTf * ~inGain;
 	~myInBuffer.sendCollection(~inTf.asWavetableNoWrap);
-	if((~inputMenu.value == 0), {
-		~gainedInputSignal = Shaper.ar(~myInBuffer, SinOsc.ar(~freq), 1, 0);
-		"Sin from tnah".postln;
-	}, {
-		if((~inputMenu.value == 1), {
-			~gainedInputSignal = Shaper.ar(~myInBuffer, SoundIn.ar(0, 1), 1, 0);
-			"Mic from tnah".postln;
-		}, {
-			"Sin*50 from tnah".postln;
-		});
-	});
+	~gainedInputSignal = Shaper.ar(~myInBuffer, ~inputSelectonFunction.value, 1, 0);
 	if(((~dystTypeMenu.value == 1)||(~dystTypeMenu.value == 0)), {
 		~outputSignal = ~quadraticFunction.value;
 		// ~outputSignal = MidEQ.ar(in: ~quadraticFunction.value, freq: ~tone, rq: ~rq, db: ~db);
@@ -414,20 +399,7 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 ~xyBuffer = Buffer.alloc(s, 1024, 2);
 ~sound = {
 	// ~inputMenu.value = 1; // ################################################### da togliere
-	~inTf.waveFill({arg x, old, i; 2*x-1});
-	~inTf = ~inTf * ~inGain;
-	~myInBuffer.sendCollection(~inTf.asWavetableNoWrap);
-	if((~inputMenu.value == 0), {
-		~gainedInputSignal = Shaper.ar(~myInBuffer, SinOsc.ar(~freq), 1, 0);
-		"Sin from tnah".postln;
-	}, {
-		if((~inputMenu.value == 1), {
-			~gainedInputSignal = Shaper.ar(~myInBuffer, SoundIn.ar(0, 1), 1, 0);
-			"Mic from tnah".postln;
-		}, {
-			"Sin*50 from tnah".postln;
-		});
-	});
+	~gainedInputSignal = Shaper.ar(~myInBuffer, ~inputSelectonFunction.value, 1, 0);
 	if(((~dystTypeMenu.value == 1)||(~dystTypeMenu.value == 0)), {
 		~outputSignal = ~quadraticFunction.value;
 		// ~outputSignal = MidEQ.ar(in: ~quadraticFunction.value, freq: ~tone, rq: ~rq, db: ~db);
