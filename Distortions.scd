@@ -110,6 +110,7 @@ s.reboot;
 			}
 		)
 	});
+	if((~gain == 0), {~tf = ~tf * 0;}, {});
 	~tf = ~tf * ~outGain;
 	~myBuffer.sendCollection(~tf.asWavetableNoWrap);
 	Shaper.ar(~myBuffer, ~gainedInputSignal, 1, 0);
@@ -138,6 +139,8 @@ w.onClose = {(
 	~outputScope.stop;
 	~xyScope.stop;
 )};
+
+// Analog button
 
 ~analogButton = Button(w, Rect(500, 63, 70, 30))
         .states_([
@@ -589,6 +592,5 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 					{~knobInfoButton.value = 0; ~infow.close;};
 		)})}
 )});
-
 
 )
