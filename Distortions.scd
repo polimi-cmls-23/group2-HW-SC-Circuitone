@@ -16,6 +16,16 @@ s.reboot;
 ~analogPos = 0;
 ~analogNeg = 0;
 
+/*
+~oscBus = Bus.audio(s);
+~micBus = Bus.audio(s);
+
+a = {SinOsc.ar(~freq)}.play(s, ~oscBus);
+b = {SoundIn.ar(0, 1)}.play(s, ~micBus);
+~oscBus.scope;
+~micBus.scope;
+*/
+
 ~myBuffer = Buffer.alloc(s, 1024, 1);
 ~tf = Signal.newClear(513);
 ~myInBuffer = Buffer.alloc(s, 1024, 1);
@@ -25,14 +35,16 @@ s.reboot;
 
 ~inputSelectonFunction = {
 	if((~inputMenu.value == 0), {
-		"Sin from tnah".postln;
+		"Sin".postln;
 		SinOsc.ar(~freq);
+		// In.ar(~oscBus);
 	}, {
 		if((~inputMenu.value == 1), {
-			"Mic from tnah".postln;
+			"Mic".postln;
 			SoundIn.ar(0, 1);
+			// In.ar(~micBus);
 		}, {
-			"Sin*50 from tnah".postln;
+			"Sin*50".postln;
 			SinOsc.ar(~freq*100);
 		});
 	});
@@ -133,6 +145,12 @@ w.onClose = {(
 	~inputScope.stop;
 	~outputScope.stop;
 	~xyScope.stop;
+	/*
+	~oscBus.free;
+	~micBus.free;
+	a.free;
+	b.free;
+	*/
 )};
 
 // Analog button
@@ -374,7 +392,6 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 ~dystTypeMenu.addItem(\Linear, {"Linear". postln; ~k3_disThr.doAction;});
 ~dystTypeMenu.addItem(\Quadratic, {"Quadratic". postln; ~k3_disThr.doAction;});
 ~dystTypeMenu.addItem(\Hyperbolic_tangent, {"Hyperbolic tangent". postln; ~k3_disThr.doAction;});
-~dystTypeMenu.addItem(\item4, {"this is item 4". postln});
 ~dystTypeMenu.font_(Font("Kreon", 12));
 
 //Pop Up Menu - Input choice
@@ -396,7 +413,8 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 ~outputBuffer = Buffer.alloc(s, 1024);
 ~xyBuffer = Buffer.alloc(s, 1024, 2);
 ~sound = {
-	~gainedInputSignal = Shaper.ar(~myInBuffer, ~inputSelectonFunction.value, 1, 0);
+	~input = ~inputSelectonFunction.value;
+	~gainedInputSignal = Shaper.ar(~myInBuffer, ~input, 1, 0);
 	if(((~dystTypeMenu.value == 1)||(~dystTypeMenu.value == 0)), {
 		~outputSignal = ~quadraticFunction.value;
 		// ~outputSignal = MidEQ.ar(in: ~quadraticFunction.value, freq: ~tone, rq: ~rq, db: ~db);
@@ -410,7 +428,7 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 	});
 	ScopeOut2.ar(~gainedInputSignal, ~inputBuffer); // update input buffer
     ScopeOut2.ar(~outputSignal, ~outputBuffer); // update output buffer
-	ScopeOut2.ar([~gainedInputSignal, ~outputSignal], ~xyBuffer); // update xy buffer
+	ScopeOut2.ar([~input, ~outputSignal], ~xyBuffer); // update xy buffer
 	Out.ar(~outBus, ~outputSignal);
 }.play;
 
