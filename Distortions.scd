@@ -12,7 +12,8 @@ s.reboot;
 ~tone = 1000;
 ~rq = 2;
 ~db = 10;
-~analog = 0;
+~analogPos = 0;
+~analogNeg = 0;
 
 ~myBuffer = Buffer.alloc(s, 1024, 1);
 ~tf = Signal.newClear(513);
@@ -501,7 +502,6 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 ~tutorialText.string =
 "
                                                        TUTORIAL MODE
-
 • Choose one audio file from the 'Input Source' menu.
 • Switch between the three distorsion presets and change the parameters as you prefer.
 • When you feel comfortable, switch to the 'I can do it' mode and try to distort some of your own sounds! Have fun!";
@@ -542,7 +542,6 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 ~tutorialText.string =
 "
                                                        I CAN DO IT MODE
-
 • Choose one audio input from the 'Input Source' menu.
 • Start to play and adjust the parameters to reach the desired sound. Have fun!";
 ~gotItButton2 = Button(~iCanDoItw, Rect(275, 100, 50, 20));
