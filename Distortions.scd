@@ -75,6 +75,8 @@ s.reboot;
 			"Sin*50 from tnah".postln;
 		});
 	});
+	("AnalogPos:"+~analogPos).postln;
+	("AnalogNeg:"+~analogNeg).postln;
 	~tf.waveFill({arg x, old, i; 2*x-1}); // 0 < x_axis < 513    -1 < y_axis < 1
 	~tf.waveFill({arg x, old, i;  //    0 < x < 1    -1 < old < 1    0 < i < 512
 		if((old>0),
@@ -136,6 +138,29 @@ w.onClose = {(
 	~outputScope.stop;
 	~xyScope.stop;
 )};
+
+~analogButton = Button(w, Rect(500, 63, 70, 30))
+        .states_([
+            ["Analog", Color.white, Color.new255(red: 69, green: 111, blue: 34, alpha: 255)],
+            ["Analog", Color.white, Color.new255(red: 47, green: 72, blue: 88, alpha: 255)],
+        ]);
+~analogButton.font = f;
+~analogButton.action_({|butt|
+	// ("analogButton:"+butt.value).postln;
+	if ((butt.value==1),
+		{
+			~analogPos = (1.0.rand.round(0.01)-1.0.rand.round(0.01))*0.1*~gain;
+			~analogNeg = (1.0.rand.round(0.01)-1.0.rand.round(0.01))*0.1*~gain;
+			~k0_inGain.doAction;
+			("AnalogPos from Button:"+~analogPos).postln;
+			("AnalogNeg from Button:"+~analogNeg).postln;
+		},
+		{
+			~analogPos = 0;
+			~analogNeg = 0;
+			~k0_inGain.doAction;
+		}
+)});
 
 // Knobs
 
@@ -565,27 +590,5 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 		)})}
 )});
 
-~analogButton = Button(w, Rect(500, 63, 70, 30))
-        .states_([
-            ["Analog", Color.white, Color.new255(red: 69, green: 111, blue: 34, alpha: 255)],
-            ["Analog", Color.white, Color.new255(red: 47, green: 72, blue: 88, alpha: 255)],
-        ]);
-~analogButton.font = f;
-~analogButton.action_({|butt|
-	// ("analogButton:"+butt.value).postln;
-	if ((butt.value==1),
-		{
-			~analogPos = (1.0.rand.round(0.01)-1.0.rand.round(0.01))*0.1;
-			~analogNeg = (1.0.rand.round(0.01)-1.0.rand.round(0.01))*0.1;
-			~k0_inGain.doAction;
-			// ("Analog:"+~analog).postln;
-		},
-		{
-			~analogPos = 0;
-			~analogNeg = 0;
-			~k0_inGain.doAction;
-			// ("Analog:"+~analog).postln;
-		}
-)});
 
 )
