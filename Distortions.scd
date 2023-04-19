@@ -4,6 +4,7 @@ s.reboot;
 
 // General initializations
 
+~outBus = 0;
 ~inGain = 1.0;
 ~gain = 1;
 ~thr = 1;
@@ -40,7 +41,6 @@ s.reboot;
 // Hyperbolic tangent transfer function
 
 ~tanhFunction = {
-	// ~inputMenu.value = 1; // ################################################### da togliere
 	~inTf.waveFill({arg x, old, i; 2*x-1});
 	~inTf = ~inTf * ~inGain;
 	~myInBuffer.sendCollection(~inTf.asWavetableNoWrap);
@@ -68,7 +68,6 @@ s.reboot;
 
 ~quadraticFunction = {
 	// Link to the GeoGebra site: https://www.geogebra.org/m/x5bhsngv
-	// ~inputMenu.value = 1; // ################################################### da togliere
 	~inTf.waveFill({arg x, old, i; 2*x-1});
 	~inTf = ~inTf * ~inGain;
 	~myInBuffer.sendCollection(~inTf.asWavetableNoWrap);
@@ -110,7 +109,7 @@ s.reboot;
 	~tf = ~tf * ~outGain;
 	~myBuffer.sendCollection(~tf.asWavetableNoWrap);
 	Shaper.ar(~myBuffer, ~gainedInputSignal, 1, 0);
-	// MidEQ.ar(in: Shaper.ar(~myBuffer, ~inputSignal, 1, 0), freq: ~tone, rq: ~rq, db: ~db);
+	// MidEQ.ar(in: Shaper.ar(~myBuffer, ~gainedInputSignal, 1, 0), freq: ~tone, rq: ~rq, db: ~db);
 };
 
 // Main window
@@ -170,7 +169,7 @@ p = ControlSpec.new(minval: 0.0, maxval: 1.0);
 o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 ~k0_inGain = EZKnob(w, Rect(30, 95, 80, 80), "Input gain", i, initVal: 1, layout: 'vert2');
 ~k1_gain = EZKnob(w, Rect(145,95, 80, 80), "Gain", g, initVal: 1, layout: 'vert2');
-~k2_tone = EZKnob(w, Rect(260, 95, 80, 80), "Tone", t, initVal: 0.5, layout: 'vert2');
+~k2_tone = EZKnob(w, Rect(260, 95, 80, 80), "Tone", t, initVal: 100, layout: 'vert2');
 ~k3_disThr = EZKnob(w, Rect(375,95, 80, 80), "Harshness",  p, initVal: 1, layout: 'vert2');
 ~k4_output_level = EZKnob(w, Rect(490, 95, 80, 80), "Output", o, initVal: 1, layout: 'vert2');
 ~k0_inGain.font = f;
@@ -185,7 +184,6 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 	~fuzzButton.value = 0;
 	~distorsionButton.value = 0;
 	~inGain = knob.value;
-	// ~inputMenu.value = 1; // ################################################### da togliere
 	~inTf.waveFill({arg x, old, i; 2*x-1});
 	~inTf = ~inTf * ~inGain;
 	~myInBuffer.sendCollection(~inTf.asWavetableNoWrap);
@@ -398,7 +396,6 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 ~outputBuffer = Buffer.alloc(s, 1024);
 ~xyBuffer = Buffer.alloc(s, 1024, 2);
 ~sound = {
-	// ~inputMenu.value = 1; // ################################################### da togliere
 	~gainedInputSignal = Shaper.ar(~myInBuffer, ~inputSelectonFunction.value, 1, 0);
 	if(((~dystTypeMenu.value == 1)||(~dystTypeMenu.value == 0)), {
 		~outputSignal = ~quadraticFunction.value;
@@ -414,6 +411,7 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 	ScopeOut2.ar(~gainedInputSignal, ~inputBuffer); // update input buffer
     ScopeOut2.ar(~outputSignal, ~outputBuffer); // update output buffer
 	ScopeOut2.ar([~gainedInputSignal, ~outputSignal], ~xyBuffer); // update xy buffer
+	Out.ar(~outBus, ~outputSignal);
 }.play;
 
 //By using ScopeView, we need to use buffers and ScopeOut2 -> see ScopeView examples in the search section.
