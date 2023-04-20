@@ -16,12 +16,43 @@ s.reboot;
 ~analogPos = 0;
 ~analogNeg = 0;
 
+~guitarBuffer = Buffer.read(s,"C:/Users/Utente/Distorsion/Clean guitar loop_mono.mp3", bufnum: 11);
+~bassBuffer = Buffer.read(s,"C:/Users/Utente/Distorsion/Bass_mono.mp3", bufnum: 12);
+~voiceBuffer = Buffer.read(s,"C:/Users/Utente/Distorsion/Voice_mono.mp3", bufnum: 13);
+~alabamaBuffer = Buffer.read(s, "C:/Users/Utente/Distorsion/Sweet Home Alabama.mp3", bufnum: 14);
+
+
+SynthDef.new(\guitar, {|sig|
+	sig = PlayBuf.ar(1, bufnum: 11);
+	Out.ar(0, sig);
+}).add;
+SynthDef.new(\voice, {|sig|
+	sig = PlayBuf.ar(1, bufnum: 13);
+	Out.ar(0, sig);
+}).add;
+SynthDef.new(\bass, {|sig|
+	sig = PlayBuf.ar(1, bufnum: 12);
+	Out.ar(0, sig);
+}).add;
+SynthDef.new(\alabama, {|sig|
+	sig = PlayBuf.ar(1, bufnum: 14);
+	Out.ar(0, sig);
+}).add;
+SynthDef.new(\sinusoid, {|sig|
+	sig = SinOsc.ar(440, 0, 0.3);
+	Out.ar(0, sig);
+}).add;
+
 ~funcs = [
-	{ SinOsc.ar(440, 0, 0.3) },
-	{ Saw.ar(440, 0.3) },
-	{ WhiteNoise.ar(0.3) },
-	{ Pulse.ar(440, 0.2, 0.3) }
+	{~sinusoid = Synth.new(\sinusoid)},
+	{~guitar = Synth.new(\guitar)},
+	{~voice = Synth.new(\voice)},
+	{~bass = Synth.new(\bass)},
+	{~alabama = Synth.new(\alabama)},
+	{SoundIn.ar(0, 1)}
 ];
+
+
 
 /*
 ~oscBus = Bus.audio(s);
@@ -175,18 +206,31 @@ f = Font ("Kreon", 12);
 ~tutorialButtonStart.action_({|butt|
 	if (butt.value==1,
 		{
-			w.front;~tutorialw.front;  ~tutorialButton.value = 1; ~initialPopUp.close; ~inputMenu.items_(["Sinusoid", "Guitar mp3", "Voice mp3", "Bass mp3", "Sweet Home Alabama"]);
+			w.front;
+			~tutorialw.front;
+			~tutorialButton.value = 1;
+			~initialPopUp.close;
+			~inputMenu.items_(["Sinusoid", "Guitar mp3", "Voice mp3", "Bass mp3", "Sweet Home Alabama"]);
 			~playButton = Button(w, ~playButRect)
 			           .states_([
 				["Play", Color.white, Color.new255(red: 69, green: 111, blue: 34, alpha: 255)],
 				["Pause", Color.white, Color.new255(red: 47, green: 72, blue: 88, alpha: 255)],
-			]);
+			])
+			.action_({|butt|
+				if (butt.value==0,
+					{
+						//~snd.release;
+						CmdPeriod.run;
+					},
+					{~snd = ~funcs.at(~inputMenu.value).play;}
+			)
+			});
 			~playButton.font_(Font("Kreon", 15));
-			~playButton.action_({|butt|
-				if (butt.value==1,
-					{CmdPeriod.run},
-					{}
-			)});
+		},
+		{};
+		~inputMenu.action = {
+			~playButton.value = 0;
+			CmdPeriod.run;
 		};
 )});
 
@@ -558,21 +602,22 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 			~playButton.close;
 			~inputMenu.clear;
 			~inputMenu.items_(["Sinusoid", "Guitar mp3", "Voice mp3", "Bass mp3", "Sweet Home Alabama"]);
+			~inputMenu.action = {
+				~playButton.value = 0;
+				CmdPeriod.run;
+			};
 			~playButton = Button(w, ~playButRect)
 			           .states_([
 				["Play", Color.white, Color.new255(red: 69, green: 111, blue: 34, alpha: 255)],
 				["Pause", Color.white, Color.new255(red: 47, green: 72, blue: 88, alpha: 255)],
 			])
-			.mouseDownAction_({
-				~snd = ~funcs.at(~inputMenu.value).play;
-			})
 			.action_({|butt|
-				if (butt.value==1,
+				if (butt.value==0,
 					{
-						~snd.release;
-						//CmdPeriod.run
+						//~snd.release;
+						CmdPeriod.run;
 					},
-					{}
+					{~snd = ~funcs.at(~inputMenu.value).play;}
 			)
 			});
 			~playButton.font_(Font("Kreon", 15));
@@ -679,6 +724,7 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 )});
 
 // Lo fa iniziare senza che emetta suono
-// CmdPeriod.run;
+CmdPeriod.run;
 
 )
+
