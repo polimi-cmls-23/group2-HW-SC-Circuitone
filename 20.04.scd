@@ -42,6 +42,10 @@ SynthDef.new(\sinusoid, {|sig|
 	sig = SinOsc.ar(440, 0, 0.3);
 	Out.ar(0, sig);
 }).add;
+SynthDef.new(\mic, {|sig|
+	sig = SoundIn.ar(0, 1);
+	Out.ar(0, sig);
+}).add;
 
 ~funcs = [
 	{~sinusoid = Synth.new(\sinusoid)},
@@ -49,10 +53,8 @@ SynthDef.new(\sinusoid, {|sig|
 	{~voice = Synth.new(\voice)},
 	{~bass = Synth.new(\bass)},
 	{~alabama = Synth.new(\alabama)},
-	{SoundIn.ar(0, 1)}
+	{~mic = Synth.new(\mic)}
 ];
-
-
 
 /*
 ~oscBus = Bus.audio(s);
@@ -243,8 +245,22 @@ f = Font ("Kreon", 12);
 ~iCanDoItButtonStart.value = 0;
 ~iCanDoItButtonStart.action_({|butt|
 	if (butt.value==1,
-		{w.front; ~iCanDoItButton.value = 1; ~iCanDoItw.front; ~initialPopUp.close; w.background = ~wColor2; ~inputMenu.items_(["Computer mic", "Soundcard"]);},
+		{
+			w.front;
+			~iCanDoItButton.value = 1;
+			~iCanDoItw.front;
+			~initialPopUp.close;
+			w.background = ~wColor2;
+			~inputMenu.items_(["Computer mic", "Soundcard"]);
+			~funcs.at(~inputMenu.value + 5).play;
+			~inputMenu.action = {CmdPeriod.run};
+		},
 		{};
+		~inputMenu.action = {
+			~playButton.value = 0;
+			CmdPeriod.run;
+		};
+
 )});
 
 // Main window
@@ -662,6 +678,8 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 			~inputMenu.clear;
 			~inputMenu.items_(["Computer mic", "Soundcard"]);
 			~iCanDoItw.front;
+			~funcs.at(~inputMenu.value + 5).play;
+			~inputMenu.action = {CmdPeriod.run};
 	},
 	{w.background = ~wColor; ~tutorialButton.value = 1};
 )});
@@ -727,4 +745,5 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 CmdPeriod.run;
 
 )
+
 
