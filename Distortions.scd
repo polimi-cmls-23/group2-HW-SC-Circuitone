@@ -16,10 +16,16 @@ s.reboot;
 ~analogPos = 0;
 ~analogNeg = 0;
 
+~funcs = [
+	{ SinOsc.ar(440, 0, 0.3) },
+	{ Saw.ar(440, 0.3) },
+	{ WhiteNoise.ar(0.3) },
+	{ Pulse.ar(440, 0.2, 0.3) }
+];
+
 /*
 ~oscBus = Bus.audio(s);
 ~micBus = Bus.audio(s);
-
 a = {SinOsc.ar(~freq)}.play(s, ~oscBus);
 b = {SoundIn.ar(0, 1)}.play(s, ~micBus);
 ~oscBus.scope;
@@ -33,7 +39,7 @@ b = {SoundIn.ar(0, 1)}.play(s, ~micBus);
 
 // Input selection function
 
-~inputSelectonFunction = {
+~inputSelectionFunction = {
 	if((~inputMenu.value == 0), {
 		"Sin".postln;
 		SinOsc.ar(~freq);
@@ -50,13 +56,15 @@ b = {SoundIn.ar(0, 1)}.play(s, ~micBus);
 	});
 };
 
+// Arctangent transfer function??
+
 // Hyperbolic tangent transfer function
 
 ~tanhFunction = {
 	~inTf.waveFill({arg x, old, i; 2*x-1});
 	~inTf = ~inTf * ~inGain;
 	~myInBuffer.sendCollection(~inTf.asWavetableNoWrap);
-	~gainedInputSignal = Shaper.ar(~myInBuffer, ~inputSelectonFunction.value, 1, 0);
+	~gainedInputSignal = Shaper.ar(~myInBuffer, ~inputSelectionFunction.value, 1, 0);
 	~tf.waveFill({arg x, old, i; 2*x-1}); // 0 < x_axis < 513    -1 < y_axis < 1
 	~tf.waveFill({arg x, old, i;  //    0 < x < 1    -1 < old < 1    0 < i < 512
 		if((old>0),
@@ -76,6 +84,31 @@ b = {SoundIn.ar(0, 1)}.play(s, ~micBus);
 	// MidEQ.ar(in: Shaper.ar(~myBuffer, ~gainedInputSignal, 1, 0), freq: ~tone, rq: ~rq, db: ~db);
 };
 
+// Foldback transfer function
+
+~foldbackFunction = {
+	~inTf.waveFill({arg x, old, i; 2*x-1});
+	~inTf = ~inTf * ~inGain;
+	~myInBuffer.sendCollection(~inTf.asWavetableNoWrap);
+	~gainedInputSignal = Shaper.ar(~myInBuffer, ~inputSelectionFunction.value, 1, 0);
+	~tf.waveFill({arg x, old, i; 2*x-1}); // 0 < x_axis < 513    -1 < y_axis < 1
+	~tf.waveFill({arg x, old, i;  //    0 < x < 1    -1 < old < 1    0 < i < 512
+		if((old>0),
+			{// positive
+				(~gain*(~gain*old).sin)*((-2)*~gain*old).exp
+			},
+			{// negative
+				(~gain*(~gain*old).sin)*(2*~gain*old).exp;
+			}
+		)
+	});
+	if((~gain == 0), {~tf = ~tf * 0;}, {});
+	~tf = ~tf * ~outGain;
+	~myBuffer.sendCollection(~tf.asWavetableNoWrap);
+	Shaper.ar(~myBuffer, ~gainedInputSignal, 1, 0);
+	// MidEQ.ar(in: Shaper.ar(~myBuffer, ~gainedInputSignal, 1, 0), freq: ~tone, rq: ~rq, db: ~db);
+};
+
 // Quadratic transfer function
 
 ~quadraticFunction = {
@@ -83,7 +116,7 @@ b = {SoundIn.ar(0, 1)}.play(s, ~micBus);
 	~inTf.waveFill({arg x, old, i; 2*x-1});
 	~inTf = ~inTf * ~inGain;
 	~myInBuffer.sendCollection(~inTf.asWavetableNoWrap);
-	~gainedInputSignal = Shaper.ar(~myInBuffer, ~inputSelectonFunction.value, 1, 0);
+	~gainedInputSignal = Shaper.ar(~myInBuffer, ~inputSelectionFunction.value, 1, 0);
 	~tf.waveFill({arg x, old, i; 2*x-1}); // 0 < x_axis < 513    -1 < y_axis < 1
 	~tf.waveFill({arg x, old, i;  //    0 < x < 1    -1 < old < 1    0 < i < 512
 		if((old>0),
@@ -124,6 +157,52 @@ b = {SoundIn.ar(0, 1)}.play(s, ~micBus);
 	// MidEQ.ar(in: Shaper.ar(~myBuffer, ~gainedInputSignal, 1, 0), freq: ~tone, rq: ~rq, db: ~db);
 };
 
+// Choose a mode - Initial PopUp
+
+f = Font ("Kreon", 12);
+~initialPopUp = Window.new("Initial mode choice", Rect(left: 650, top: 150, width: 400, height: 115), false);
+~initialPopUp.front;
+~initialPopUp.background = ~wColor;
+~initialText = StaticText(~initialPopUp, Rect(20, 10, 380, 50));
+~initialText.string = "Welcome to DISTEACHER, choose a mode to start.";
+~initialText.font = Font("Kreon", 17);
+~tutorialButtonStart = Button(~initialPopUp, Rect(50, 70, 100, 30));
+~tutorialButtonStart.font = f;
+~tutorialButtonStart.states_([
+	["Tutorial mode", Color.white, Color.new255(red: 69, green: 111, blue: 34, alpha: 255)],
+	["Tutorial mode", Color.white, Color.new255(red: 47, green: 72, blue: 88, alpha: 255)],
+]);
+~tutorialButtonStart.action_({|butt|
+	if (butt.value==1,
+		{
+			w.front; ~tutorialButton.value = 1; ~tutorialw.front; ~initialPopUp.close;
+			~playButton = Button(w, ~playButRect)
+			           .states_([
+				["Play", Color.white, Color.new255(red: 69, green: 111, blue: 34, alpha: 255)],
+				["Pause", Color.white, Color.new255(red: 47, green: 72, blue: 88, alpha: 255)],
+			]);
+			~playButton.font_(Font("Kreon", 15));
+			~playButton.action_({|butt|
+				if (butt.value==1,
+					{CmdPeriod.run},
+					{}
+			)});
+		};
+)});
+
+~iCanDoItButtonStart = Button(~initialPopUp, Rect(250, 70, 100, 30))
+        .states_([
+            ["I can do it", Color.white, Color.new255(red: 69, green: 111, blue: 34, alpha: 255)],
+            ["I can do it", Color.white, Color.new255(red: 47, green: 72, blue: 88, alpha: 255)],
+        ]);
+~iCanDoItButtonStart.font = f;
+~iCanDoItButtonStart.value = 0;
+~iCanDoItButtonStart.action_({|butt|
+	if (butt.value==1,
+		{w.front; ~iCanDoItButton.value = 1; ~iCanDoItw.front; ~initialPopUp.close; w.background = ~wColor2},
+		{};
+)});
+
 // Main window
 
 f = Font ("Kreon", 12);
@@ -132,7 +211,6 @@ w = Window("Distorsion", ~wRect, false);
 ~wColor = Color.new255(red: 251, green: 236, blue: 136, alpha: 255);
 ~wColor2 = Color.new255(red: 255, green: 165, blue: 0, alpha: 255);
 w.background = ~wColor;
-w.front;
 w.alwaysOnTop = true;
 ~effectName = StaticText(w,Rect(150, 15, 300, 50))
 .string_("DISTEACHER")
@@ -205,7 +283,7 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 	~inTf.waveFill({arg x, old, i; 2*x-1});
 	~inTf = ~inTf * ~inGain;
 	~myInBuffer.sendCollection(~inTf.asWavetableNoWrap);
-	~gainedInputSignal = Shaper.ar(~myInBuffer, ~inputSelectonFunction.value, 1, 0);
+	~gainedInputSignal = Shaper.ar(~myInBuffer, ~inputSelectionFunction.value, 1, 0);
 	if(((~dystTypeMenu.value == 1)||(~dystTypeMenu.value == 0)), {
 		~outputSignal = ~quadraticFunction.value;
 		// ~outputSignal = MidEQ.ar(in: ~quadraticFunction.value, freq: ~tone, rq: ~rq, db: ~db);
@@ -214,7 +292,7 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 			~outputSignal = ~tanhFunction.value;
 			// ~outputSignal = MidEQ.ar(in: ~~tanhFunction.value, freq: ~tone, rq: ~rq, db: ~db);
 		}, {
-			~outputSignal = ~quadraticFunction.value;
+			~outputSignal = ~foldbackFunction.value;
 		});
 	});
 });
@@ -233,7 +311,7 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 			~outputSignal = ~tanhFunction.value;
 			// ~outputSignal = MidEQ.ar(in: ~~tanhFunction.value, freq: ~tone, rq: ~rq, db: ~db);
 		}, {
-			~outputSignal = ~quadraticFunction.value;
+			~outputSignal = ~foldbackFunction.value;
 		});
 	});
 });
@@ -252,7 +330,7 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 			~outputSignal = ~tanhFunction.value;
 			// ~outputSignal = MidEQ.ar(in: ~~tanhFunction.value, freq: ~tone, rq: ~rq, db: ~db);
 		}, {
-			~outputSignal = ~quadraticFunction.value;
+			~outputSignal = ~foldbackFunction.value;
 		});
 	});
 });
@@ -273,7 +351,7 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 			~outputSignal = ~tanhFunction.value;
 			// ~outputSignal = MidEQ.ar(in: ~~tanhFunction.value, freq: ~tone, rq: ~rq, db: ~db);
 		}, {
-			~outputSignal = ~quadraticFunction.value;
+			~outputSignal = ~foldbackFunction.value;
 		});
 	});
 });
@@ -292,7 +370,7 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 			~outputSignal = ~tanhFunction.value;
 			// ~outputSignal = MidEQ.ar(in: ~~tanhFunction.value, freq: ~tone, rq: ~rq, db: ~db);
 		}, {
-			~outputSignal = ~quadraticFunction.value;
+			~outputSignal = ~foldbackFunction.value;
 		});
 	});
 });
@@ -340,7 +418,7 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 					~outputSignal = ~tanhFunction.value;
 					// ~outputSignal = MidEQ.ar(in: ~~tanhFunction.value, freq: ~tone, rq: ~rq, db: ~db);
 				}, {
-					~outputSignal = ~quadraticFunction.value;
+					~outputSignal = ~foldbackFunction.value;
 				});
 			});
 		};
@@ -360,7 +438,7 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 					~outputSignal = ~tanhFunction.value;
 					// ~outputSignal = MidEQ.ar(in: ~~tanhFunction.value, freq: ~tone, rq: ~rq, db: ~db);
 				}, {
-					~outputSignal = ~quadraticFunction.value;
+					~outputSignal = ~foldbackFunction.value;
 				});
 			});
 		};
@@ -380,7 +458,7 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 					~outputSignal = ~tanhFunction.value;
 					// ~outputSignal = MidEQ.ar(in: ~~tanhFunction.value, freq: ~tone, rq: ~rq, db: ~db);
 				}, {
-					~outputSignal = ~quadraticFunction.value;
+					~outputSignal = ~foldbackFunction.value;
 				});
 			});
 		};
@@ -389,19 +467,18 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 //Pop Up Menu - Distorsion Type
 
 ~dystTypeMenu = EZPopUpMenu.new(w, Rect(366, 260, 205, 20), "CURVE TYPE", layout: \horz);
-~dystTypeMenu.addItem(\Linear, {"Linear". postln; ~k3_disThr.doAction;});
-~dystTypeMenu.addItem(\Quadratic, {"Quadratic". postln; ~k3_disThr.doAction;});
-~dystTypeMenu.addItem(\Hyperbolic_tangent, {"Hyperbolic tangent". postln; ~k3_disThr.doAction;});
+~dystTypeMenu.addItem(\Linear, {"Linear".postln; ~k3_disThr.doAction;});
+~dystTypeMenu.addItem(\Quadratic, {"Quadratic".postln; ~k3_disThr.doAction;});
+~dystTypeMenu.addItem(\Hyperbolic_tangent, {"Hyperbolic tangent".postln; ~k3_disThr.doAction;});
+~dystTypeMenu.addItem(\Foldback, {"Foldback".postln; ~k3_disThr.doAction;});
 ~dystTypeMenu.font_(Font("Kreon", 12));
 
 //Pop Up Menu - Input choice
 
-~inputMenu = EZPopUpMenu.new(w, Rect(29, 260, 200, 20), "INPUT SOURCE", layout: \horz);
-~inputMenu.addItem(\Sinusoid, {"Sinusoid". postln; ~k0_inGain.doAction;});
-~inputMenu.addItem(\Computer_mic, {"Computer_mic". postln; ~k0_inGain.doAction;});
-~inputMenu.addItem(\Soundcard, {"Soundcard". postln; ~k0_inGain.doAction;});
-~inputMenu.addItem(\Guitar_mp3, {"Guitar_mp3". postln; ~k0_inGain.doAction;});
-~inputMenu.addItem(\Voice_mp3, {"Voice_mp3". postln; ~k0_inGain.doAction;});
+~inputMenuTitle = StaticText(w, Rect(32, 260, 90, 20))
+	.string = "INPUT SOURCE";
+~inputMenuTitle.font_(Font("Kreon", 11));
+~inputMenu = PopUpMenu.new(w, Rect(118, 260, 100, 20));
 ~inputMenu.font_(Font("Kreon", 11));
 
 // Wave scopes
@@ -413,7 +490,7 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 ~outputBuffer = Buffer.alloc(s, 1024);
 ~xyBuffer = Buffer.alloc(s, 1024, 2);
 ~sound = {
-	~input = ~inputSelectonFunction.value;
+	~input = ~inputSelectionFunction.value;
 	~gainedInputSignal = Shaper.ar(~myInBuffer, ~input, 1, 0);
 	if(((~dystTypeMenu.value == 1)||(~dystTypeMenu.value == 0)), {
 		~outputSignal = ~quadraticFunction.value;
@@ -423,7 +500,7 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 			~outputSignal = ~tanhFunction.value;
 			// ~outputSignal = MidEQ.ar(in: ~~tanhFunction.value, freq: ~tone, rq: ~rq, db: ~db);
 		}, {
-			~outputSignal = ~quadraticFunction.value;
+			~outputSignal = ~foldbackFunction.value;
 		});
 	});
 	ScopeOut2.ar(~gainedInputSignal, ~inputBuffer); // update input buffer
@@ -460,7 +537,7 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 .font_(Font("Kreon", 12));
 
 // Mode Buttons
-
+~playButRect = Rect(275, 260, 50, 30);
 ~tutorialButton = Button(w, Rect(30, 25, 100, 30));
 ~tutorialButton.states_([
 	["Tutorial mode", Color.white, Color.new255(red: 69, green: 111, blue: 34, alpha: 255)],
@@ -472,13 +549,33 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 		{
 			w.background = ~wColor2;
 			~iCanDoItButton.value = 1;
+			~playButton.close;
 		},
 		{
 			w.background = ~wColor;
 			~iCanDoItButton.value = 0;
 			~tutorialw.front;
-			~inputMenu.replaceItemAt(0, \Guitar_mp3, {"Item 0 replaced".postln});
-			~inputMenu.replaceItemAt(1, \Voice_mp3, {"Item 1 replaced".postln});
+			~playButton.close;
+			~inputMenu.clear;
+			~inputMenu.items_(["Sinusoid", "Guitar mp3", "Voice mp3", "Bass mp3"]);
+			~playButton = Button(w, ~playButRect)
+			           .states_([
+				["Play", Color.white, Color.new255(red: 69, green: 111, blue: 34, alpha: 255)],
+				["Pause", Color.white, Color.new255(red: 47, green: 72, blue: 88, alpha: 255)],
+			])
+			.mouseDownAction_({
+				~snd = ~funcs.at(~inputMenu.value).play;
+			})
+			.action_({|butt|
+				if (butt.value==1,
+					{
+						~snd.release;
+						//CmdPeriod.run
+					},
+					{}
+			)
+			});
+			~playButton.font_(Font("Kreon", 15));
 		};
 )});
 ~tutorialButton.font = f;
@@ -516,8 +613,9 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 	{
 			w.background = ~wColor2;
 			~tutorialButton.value = 0;
-			~inputMenu.replaceItemAt(0, \Computer_mic, {"Item 0  replaced".postln});
-			~inputMenu.replaceItemAt(1, \Soundcard, {"Item 1 replaced".postln});
+			~playButton.close;
+			~inputMenu.clear;
+			~inputMenu.items_(["Computer mic", "Soundcard"]);
 			~iCanDoItw.front;
 	},
 	{w.background = ~wColor; ~tutorialButton.value = 1};
@@ -579,5 +677,8 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 					{~knobInfoButton.value = 0; ~infow.close;};
 		)})}
 )});
+
+// Lo fa iniziare senza che emetta suono
+// CmdPeriod.run;
 
 )
