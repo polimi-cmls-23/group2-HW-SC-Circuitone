@@ -1,5 +1,5 @@
-Server.default.options.outDevice_("CABLE Input (VB-Audio Virtual Cable)");
-Server.default.options.inDevice_("Gruppo microfoni (Realtek(R) Audio)");
+// Server.default.options.outDevice_("CABLE Input (VB-Audio Virtual C");
+// Server.default.options.inDevice = nil;
 s.reboot;
 
 (
@@ -12,7 +12,7 @@ s.reboot;
 ~gain = 1;
 ~thr = 1;
 ~outGain = 1.0;
-~freq = 100;
+~freq = 20;
 ~tone = 100;
 ~rq = 2;
 ~db = 10;
@@ -27,9 +27,9 @@ s.reboot;
 ~soundcardBus = Bus.audio(s);
 ~inputBus = Bus.audio(s);
 
-~inputBus.scope;
+// ~inputBus.scope;
 
-~sinusoid = {SinOsc.ar(10, 0, 0.5)};
+~sinusoid = {SinOsc.ar(~freq, 0, 1)};
 ~guitar = {PlayBuf.ar(1, ~guitarBuffer.bufnum)};
 ~voice = {PlayBuf.ar(1, ~voiceBuffer.bufnum)};
 ~bass = {PlayBuf.ar(1, ~bassBuffer.bufnum)};
@@ -155,6 +155,12 @@ f = Font ("Kreon", 12);
 ~initialText.string = "Welcome to DISTEACHER, choose a mode to start.";
 ~initialText.font = Font("Kreon", 16);
 
+~initialPopUp.onClose = {(
+	~k3_disThr.doAction;
+	~playButton.value = 1;
+	~playButton.doAction;
+)};
+
 ~tutorialButtonStart = Button(~initialPopUp, Rect(50, 70, 100, 30));
 ~tutorialButtonStart.font = f;
 ~tutorialButtonStart.states_([
@@ -243,14 +249,6 @@ f = Font ("Kreon", 12);
 			~playButton.font_(Font("Kreon", 15));
 		},
 		{};
-		/*
-		~inputMenu.action = {
-			~playButton.value = 0;
-			// CmdPeriod.run;
-			// ~snd.run(false);
-			{Out.ar(~inputBus, In.ar(~emptyBus))}.play;
-		};
-		*/
 )});
 
 ~iCanDoItButtonStart = Button(~initialPopUp, Rect(250, 70, 100, 30))
@@ -616,7 +614,7 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 	});
 	ScopeOut2.ar(~gainedInputSignal, ~inputBuffer); // update input buffer
     ScopeOut2.ar(~outputSignal, ~outputBuffer); // update output buffer
-	ScopeOut2.ar([In.ar(~inputBus), ~outputSignal], ~xyBuffer); // update xy buffer
+	ScopeOut2.ar([~gainedInputSignal, ~outputSignal], ~xyBuffer); // update xy buffer
 	Out.ar(~outBus, ~outputSignal);
 }.play;
 
@@ -655,12 +653,12 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 	["Tutorial mode", Color.white, Color.new255(red: 47, green: 72, blue: 88, alpha: 255)],
 ]);
 ~tutorialButton.action_({|butt|
-	// butt.value.postln;
+	~playButton.value = 1;
+	~playButton.doAction;
 	if (butt.value==0,
 		{
 			w.background = ~wColor2;
 			~iCanDoItButton.value = 1;
-			// ~playButton.close;
 		},
 		{
 			w.background = ~wColor;
@@ -739,6 +737,7 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 					)}
 				)
 			});
+			~playButton.value = 1;
 			~playButton.font_(Font("Kreon", 15));
 		};
 )});
@@ -773,6 +772,8 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 ~iCanDoItButton.font = f;
 ~iCanDoItButton.value = 0;
 ~iCanDoItButton.action_({|butt|
+	~playButton.value = 1;
+	~playButton.doAction;
 	if (butt.value==0,
 		{
 			w.background = ~wColor;
@@ -822,6 +823,7 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 					)}
 				)
 			});
+			~playButton.value = 1;
 			~playButton.font_(Font("Kreon", 15));
 		};
 )});
@@ -882,8 +884,5 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 					{~knobInfoButton.value = 0; ~infow.close;};
 		)})}
 )});
-
-// Lo fa iniziare senza che emetta suono
-// CmdPeriod.run;
 
 )
