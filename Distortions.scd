@@ -292,7 +292,7 @@ f = Font ("Kreon", 12);
 							~voiceSig.free;
 							~bassSig.free;
 							~alabamaSig.free;
-							~micSig = {Out.ar(~inputBus, ~funcs.at(~inputMenu.value))}.play;
+							~micSig = {Out.ar(~inputBus, ~funcs.at(~inputMenu.value+5))}.play;
 							~soundcardSig.free;
 						},
 						{
@@ -302,29 +302,14 @@ f = Font ("Kreon", 12);
 							~bassSig.free;
 							~alabamaSig.free;
 							~micSig.free;
-							~soundcardSig = {Out.ar(~inputBus, ~funcs.at(~inputMenu.value))}.play;
+							~soundcardSig = {Out.ar(~inputBus, ~funcs.at(~inputMenu.value+5))}.play;
 						}
 					)}
 				)
 			});
 			~playButton.font_(Font("Kreon", 15));
-			/*
-			~inputMenu.action = {
-				// CmdPeriod.run;
-				// ~snd.run(false);
-				{Out.ar(~inputBus, In.ar(~emptyBus))}.play;
-			};
-			*/
 		},
 		{};
-		/*
-		~inputMenu.action = {
-			~playButton.value = 0;
-			// CmdPeriod.run;
-			// ~snd.run(false);
-			{Out.ar(~inputBus, In.ar(~emptyBus))}.play;
-		};
-		*/
 )});
 
 // Main window
@@ -342,7 +327,6 @@ w.alwaysOnTop = true;
 .font_(Font("Kreon", 40));
 
 w.onClose = {(
-	// CmdPeriod.run;
 	~sound.stop;
 	Buffer.freeAll(s);
 	~inputScope.stop;
@@ -823,7 +807,7 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 							~voiceSig.free;
 							~bassSig.free;
 							~alabamaSig.free;
-							~micSig = {Out.ar(~inputBus, ~funcs.at(~inputMenu.value))}.play;
+							~micSig = {Out.ar(~inputBus, ~funcs.at(~inputMenu.value+5))}.play;
 							~soundcardSig.free;
 						},
 						{
@@ -833,7 +817,7 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 							~bassSig.free;
 							~alabamaSig.free;
 							~micSig.free;
-							~soundcardSig = {Out.ar(~inputBus, ~funcs.at(~inputMenu.value))}.play;
+							~soundcardSig = {Out.ar(~inputBus, ~funcs.at(~inputMenu.value+5))}.play;
 						}
 					)}
 				)
