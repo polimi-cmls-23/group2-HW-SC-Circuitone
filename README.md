@@ -1,6 +1,8 @@
 # Circuitone
 # THE DISTEACHER
 
+![Screenshot](https://user-images.githubusercontent.com/89461273/233733159-7ef2b0b8-76b8-47d9-b658-c20fc50825c5.png)
+
 Do you like distorted guitar music but you have never undestood how do guitarists obtain that sound? Well, our project is here to help you!
 
 With our application, the Disteacher, you will learn in an interactive way what are different types of distortion and which parameters influence the output sound.
