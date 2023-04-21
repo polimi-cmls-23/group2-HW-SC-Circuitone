@@ -1,3 +1,5 @@
+Server.default.options.outDevice_("CABLE Input (VB-Audio Virtual Cable)");
+Server.default.options.inDevice_("Gruppo microfoni (Realtek(R) Audio)");
 s.reboot;
 
 (
@@ -5,6 +7,7 @@ s.reboot;
 // General initializations
 
 ~outBus = 0;
+
 ~inGain = 1.0;
 ~gain = 1;
 ~thr = 1;
@@ -16,45 +19,30 @@ s.reboot;
 ~analogPos = 0;
 ~analogNeg = 0;
 
-~funcs = [
-	{ SinOsc.ar(440, 0, 0.3) },
-	{ Saw.ar(440, 0.3) },
-	{ WhiteNoise.ar(0.3) },
-	{ Pulse.ar(440, 0.2, 0.3) }
-];
+~guitarBuffer = Buffer.read(s, "C:/Users/Gabriele/Documents/MEGA/Magistrale/Music and Acoustic Engineering/CMLS/HW1/Clean guitar loop_mono.mp3");
+~bassBuffer = Buffer.read(s, "C:/Users/Gabriele/Documents/MEGA/Magistrale/Music and Acoustic Engineering/CMLS/HW1/Bass_mono.mp3");
+~voiceBuffer = Buffer.read(s, "C:/Users/Gabriele/Documents/MEGA/Magistrale/Music and Acoustic Engineering/CMLS/HW1/Voice_mono.mp3");
+~alabamaBuffer = Buffer.read(s, "C:/Users/Gabriele/Documents/MEGA/Magistrale/Music and Acoustic Engineering/CMLS/HW1/Sweet Home Alabama.mp3");
 
-/*
-~oscBus = Bus.audio(s);
-~micBus = Bus.audio(s);
-a = {SinOsc.ar(~freq)}.play(s, ~oscBus);
-b = {SoundIn.ar(0, 1)}.play(s, ~micBus);
-~oscBus.scope;
-~micBus.scope;
-*/
+~soundcardBus = Bus.audio(s);
+~inputBus = Bus.audio(s);
+
+~inputBus.scope;
+
+~sinusoid = {SinOsc.ar(10, 0, 0.5)};
+~guitar = {PlayBuf.ar(1, ~guitarBuffer.bufnum)};
+~voice = {PlayBuf.ar(1, ~voiceBuffer.bufnum)};
+~bass = {PlayBuf.ar(1, ~bassBuffer.bufnum)};
+~alabama = {PlayBuf.ar(1, ~alabamaBuffer.bufnum)};
+~mic = {SoundIn.ar(0, 1)};
+~soundcard = {In.ar(~soundcardBus, 1)};
+
+~funcs = [~sinusoid, ~guitar, ~voice, ~bass, ~alabama, ~mic, ~soundcard];
 
 ~myBuffer = Buffer.alloc(s, 1024, 1);
 ~tf = Signal.newClear(513);
 ~myInBuffer = Buffer.alloc(s, 1024, 1);
 ~inTf = Signal.newClear(513);
-
-// Input selection function
-
-~inputSelectionFunction = {
-	if((~inputMenu.value == 0), {
-		"Sin".postln;
-		SinOsc.ar(~freq);
-		// In.ar(~oscBus);
-	}, {
-		if((~inputMenu.value == 1), {
-			"Mic".postln;
-			SoundIn.ar(0, 1);
-			// In.ar(~micBus);
-		}, {
-			"Sin*50".postln;
-			SinOsc.ar(~freq*100);
-		});
-	});
-};
 
 // Arctangent transfer function??
 
@@ -64,7 +52,7 @@ b = {SoundIn.ar(0, 1)}.play(s, ~micBus);
 	~inTf.waveFill({arg x, old, i; 2*x-1});
 	~inTf = ~inTf * ~inGain;
 	~myInBuffer.sendCollection(~inTf.asWavetableNoWrap);
-	~gainedInputSignal = Shaper.ar(~myInBuffer, ~inputSelectionFunction.value, 1, 0);
+	~gainedInputSignal = Shaper.ar(~myInBuffer, In.ar(~inputBus), 1, 0);
 	~tf.waveFill({arg x, old, i; 2*x-1}); // 0 < x_axis < 513    -1 < y_axis < 1
 	~tf.waveFill({arg x, old, i;  //    0 < x < 1    -1 < old < 1    0 < i < 512
 		if((old>0),
@@ -90,15 +78,15 @@ b = {SoundIn.ar(0, 1)}.play(s, ~micBus);
 	~inTf.waveFill({arg x, old, i; 2*x-1});
 	~inTf = ~inTf * ~inGain;
 	~myInBuffer.sendCollection(~inTf.asWavetableNoWrap);
-	~gainedInputSignal = Shaper.ar(~myInBuffer, ~inputSelectionFunction.value, 1, 0);
+	~gainedInputSignal = Shaper.ar(~myInBuffer, In.ar(~inputBus), 1, 0);
 	~tf.waveFill({arg x, old, i; 2*x-1}); // 0 < x_axis < 513    -1 < y_axis < 1
 	~tf.waveFill({arg x, old, i;  //    0 < x < 1    -1 < old < 1    0 < i < 512
 		if((old>0),
 			{// positive
-				(~gain*(~gain*old).sin)*((-2)*~gain*old).exp
+				((~gain+~analogPos)*((~gain+~analogPos)*old).sin)*((-2)*(~gain+~analogPos)*old).exp
 			},
 			{// negative
-				(~gain*(~gain*old).sin)*(2*~gain*old).exp;
+				((~gain+~analogPos)*((~gain+~analogPos)*old).sin)*(2*(~gain+~analogPos)*old).exp;
 			}
 		)
 	});
@@ -116,7 +104,7 @@ b = {SoundIn.ar(0, 1)}.play(s, ~micBus);
 	~inTf.waveFill({arg x, old, i; 2*x-1});
 	~inTf = ~inTf * ~inGain;
 	~myInBuffer.sendCollection(~inTf.asWavetableNoWrap);
-	~gainedInputSignal = Shaper.ar(~myInBuffer, ~inputSelectionFunction.value, 1, 0);
+	~gainedInputSignal = Shaper.ar(~myInBuffer, In.ar(~inputBus), 1, 0);
 	~tf.waveFill({arg x, old, i; 2*x-1}); // 0 < x_axis < 513    -1 < y_axis < 1
 	~tf.waveFill({arg x, old, i;  //    0 < x < 1    -1 < old < 1    0 < i < 512
 		if((old>0),
@@ -165,7 +153,8 @@ f = Font ("Kreon", 12);
 ~initialPopUp.background = ~wColor;
 ~initialText = StaticText(~initialPopUp, Rect(20, 10, 380, 50));
 ~initialText.string = "Welcome to DISTEACHER, choose a mode to start.";
-~initialText.font = Font("Kreon", 17);
+~initialText.font = Font("Kreon", 16);
+
 ~tutorialButtonStart = Button(~initialPopUp, Rect(50, 70, 100, 30));
 ~tutorialButtonStart.font = f;
 ~tutorialButtonStart.states_([
@@ -175,19 +164,93 @@ f = Font ("Kreon", 12);
 ~tutorialButtonStart.action_({|butt|
 	if (butt.value==1,
 		{
-			w.front; ~tutorialButton.value = 1; ~tutorialw.front; ~initialPopUp.close;
+			w.front;
+			~tutorialw.front;
+			~tutorialButton.value = 1;
+			~initialPopUp.close;
+			~inputMenu.items_(["Sinusoid", "Guitar mp3", "Voice mp3", "Bass mp3", "Sweet Home Alabama"]);
 			~playButton = Button(w, ~playButRect)
-			           .states_([
-				["Play", Color.white, Color.new255(red: 69, green: 111, blue: 34, alpha: 255)],
-				["Pause", Color.white, Color.new255(red: 47, green: 72, blue: 88, alpha: 255)],
-			]);
-			~playButton.font_(Font("Kreon", 15));
-			~playButton.action_({|butt|
+			.states_([
+				["Stop", Color.white, Color.new255(red: 111, green: 69, blue: 34, alpha: 255)],
+				["Play", Color.white, Color.new255(red: 69, green: 111, blue: 34, alpha: 255)]
+			])
+			.action_({|butt|
 				if (butt.value==1,
-					{CmdPeriod.run},
-					{}
-			)});
+					{
+						~sinusoidSig.free;
+						~guitarSig.free;
+						~voiceSig.free;
+						~bassSig.free;
+						~alabamaSig.free;
+						~micSig.free;
+						~soundcardSig.free;
+					},
+					{if (~inputMenu.value==0,
+						{
+							~sinusoidSig = {Out.ar(~inputBus, ~funcs.at(~inputMenu.value))}.play;
+							~guitarSig.free;
+							~voiceSig.free;
+							~bassSig.free;
+							~alabamaSig.free;
+							~micSig.free;
+							~soundcardSig.free;
+						},
+						{if(~inputMenu.value==1,
+							{
+								~sinusoidSig.free;
+								~guitarSig = {Out.ar(~inputBus, ~funcs.at(~inputMenu.value))}.play;
+								~voiceSig.free;
+								~bassSig.free;
+								~alabamaSig.free;
+								~micSig.free;
+								~soundcardSig.free;
+							},
+							{if(~inputMenu.value==2,
+								{
+									~sinusoidSig.free;
+									~guitarSig.free;
+									~voiceSig = {Out.ar(~inputBus, ~funcs.at(~inputMenu.value))}.play;
+									~bassSig.free;
+									~alabamaSig.free;
+									~micSig.free;
+									~soundcardSig.free;
+								},
+								{if(~inputMenu.value==3,
+									{
+										~sinusoidSig.free;
+										~guitarSig.free;
+										~voiceSig.free;
+										~bassSig = {Out.ar(~inputBus, ~funcs.at(~inputMenu.value))}.play;
+										~alabamaSig.free;
+										~micSig.free;
+										~soundcardSig.free;
+									},
+									{
+										~sinusoidSig.free;
+										~guitarSig.free;
+										~voiceSig.free;
+										~bassSig.free;
+										~alabamaSig = {Out.ar(~inputBus, ~funcs.at(~inputMenu.value))}.play;
+										~micSig.free;
+										~soundcardSig.free;
+									}
+								)}
+							)}
+						)}
+					)}
+				)
+			});
+			~playButton.font_(Font("Kreon", 15));
+		},
+		{};
+		/*
+		~inputMenu.action = {
+			~playButton.value = 0;
+			// CmdPeriod.run;
+			// ~snd.run(false);
+			{Out.ar(~inputBus, In.ar(~emptyBus))}.play;
 		};
+		*/
 )});
 
 ~iCanDoItButtonStart = Button(~initialPopUp, Rect(250, 70, 100, 30))
@@ -199,8 +262,69 @@ f = Font ("Kreon", 12);
 ~iCanDoItButtonStart.value = 0;
 ~iCanDoItButtonStart.action_({|butt|
 	if (butt.value==1,
-		{w.front; ~iCanDoItButton.value = 1; ~iCanDoItw.front; ~initialPopUp.close; w.background = ~wColor2},
+		{
+			w.front;
+			~iCanDoItButton.value = 1;
+			~iCanDoItw.front;
+			~initialPopUp.close;
+			w.background = ~wColor2;
+			~inputMenu.items_(["Computer mic", "Soundcard"]);
+			~playButton = Button(w, ~playButRect)
+			.states_([
+				["Stop", Color.white, Color.new255(red: 111, green: 69, blue: 34, alpha: 255)],
+				["Play", Color.white, Color.new255(red: 69, green: 111, blue: 34, alpha: 255)]
+			])
+			.action_({|butt|
+				if (butt.value==1,
+					{
+						~sinusoidSig.free;
+						~guitarSig.free;
+						~voiceSig.free;
+						~bassSig.free;
+						~alabamaSig.free;
+						~micSig.free;
+						~soundcardSig.free;
+					},
+					{if (~inputMenu.value==0,
+						{
+							~sinusoidSig.free;
+							~guitarSig.free;
+							~voiceSig.free;
+							~bassSig.free;
+							~alabamaSig.free;
+							~micSig = {Out.ar(~inputBus, ~funcs.at(~inputMenu.value))}.play;
+							~soundcardSig.free;
+						},
+						{
+							~sinusoidSig.free;
+							~guitarSig.free;
+							~voiceSig.free;
+							~bassSig.free;
+							~alabamaSig.free;
+							~micSig.free;
+							~soundcardSig = {Out.ar(~inputBus, ~funcs.at(~inputMenu.value))}.play;
+						}
+					)}
+				)
+			});
+			~playButton.font_(Font("Kreon", 15));
+			/*
+			~inputMenu.action = {
+				// CmdPeriod.run;
+				// ~snd.run(false);
+				{Out.ar(~inputBus, In.ar(~emptyBus))}.play;
+			};
+			*/
+		},
 		{};
+		/*
+		~inputMenu.action = {
+			~playButton.value = 0;
+			// CmdPeriod.run;
+			// ~snd.run(false);
+			{Out.ar(~inputBus, In.ar(~emptyBus))}.play;
+		};
+		*/
 )});
 
 // Main window
@@ -218,17 +342,21 @@ w.alwaysOnTop = true;
 .font_(Font("Kreon", 40));
 
 w.onClose = {(
+	// CmdPeriod.run;
 	~sound.stop;
 	Buffer.freeAll(s);
 	~inputScope.stop;
 	~outputScope.stop;
 	~xyScope.stop;
-	/*
-	~oscBus.free;
-	~micBus.free;
-	a.free;
-	b.free;
-	*/
+	~inputBus.free;
+	~soundcardBus.free;
+	~sinusoidSig.free;
+	~guitarSig.free;
+	~voiceSig.free;
+	~bassSig.free;
+	~alabamaSig.free;
+	~micSig.free;
+	~soundcardSig.free;
 )};
 
 // Analog button
@@ -283,7 +411,7 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 	~inTf.waveFill({arg x, old, i; 2*x-1});
 	~inTf = ~inTf * ~inGain;
 	~myInBuffer.sendCollection(~inTf.asWavetableNoWrap);
-	~gainedInputSignal = Shaper.ar(~myInBuffer, ~inputSelectionFunction.value, 1, 0);
+	~gainedInputSignal = Shaper.ar(~myInBuffer, In.ar(~inputBus), 1, 0);
 	if(((~dystTypeMenu.value == 1)||(~dystTypeMenu.value == 0)), {
 		~outputSignal = ~quadraticFunction.value;
 		// ~outputSignal = MidEQ.ar(in: ~quadraticFunction.value, freq: ~tone, rq: ~rq, db: ~db);
@@ -475,8 +603,7 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 
 //Pop Up Menu - Input choice
 
-~inputMenuTitle = StaticText(w, Rect(32, 260, 90, 20))
-	.string = "INPUT SOURCE";
+~inputMenuTitle = StaticText(w, Rect(32, 260, 90, 20)).string = "INPUT SOURCE";
 ~inputMenuTitle.font_(Font("Kreon", 11));
 ~inputMenu = PopUpMenu.new(w, Rect(118, 260, 100, 20));
 ~inputMenu.font_(Font("Kreon", 11));
@@ -490,8 +617,7 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 ~outputBuffer = Buffer.alloc(s, 1024);
 ~xyBuffer = Buffer.alloc(s, 1024, 2);
 ~sound = {
-	~input = ~inputSelectionFunction.value;
-	~gainedInputSignal = Shaper.ar(~myInBuffer, ~input, 1, 0);
+	~gainedInputSignal = Shaper.ar(~myInBuffer, In.ar(~inputBus), 1, 0);
 	if(((~dystTypeMenu.value == 1)||(~dystTypeMenu.value == 0)), {
 		~outputSignal = ~quadraticFunction.value;
 		// ~outputSignal = MidEQ.ar(in: ~quadraticFunction.value, freq: ~tone, rq: ~rq, db: ~db);
@@ -505,7 +631,7 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 	});
 	ScopeOut2.ar(~gainedInputSignal, ~inputBuffer); // update input buffer
     ScopeOut2.ar(~outputSignal, ~outputBuffer); // update output buffer
-	ScopeOut2.ar([~input, ~outputSignal], ~xyBuffer); // update xy buffer
+	ScopeOut2.ar([In.ar(~inputBus), ~outputSignal], ~xyBuffer); // update xy buffer
 	Out.ar(~outBus, ~outputSignal);
 }.play;
 
@@ -549,31 +675,93 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 		{
 			w.background = ~wColor2;
 			~iCanDoItButton.value = 1;
-			~playButton.close;
+			// ~playButton.close;
 		},
 		{
 			w.background = ~wColor;
 			~iCanDoItButton.value = 0;
 			~tutorialw.front;
-			~playButton.close;
+			// ~playButton.close;
 			~inputMenu.clear;
-			~inputMenu.items_(["Sinusoid", "Guitar mp3", "Voice mp3", "Bass mp3"]);
+			~inputMenu.items_(["Sinusoid", "Guitar mp3", "Voice mp3", "Bass mp3", "Sweet Home Alabama"]);
+			/*
+			~inputMenu.action = {
+				~playButton.value = 0;
+				// CmdPeriod.run;
+				// ~snd.run(false);
+				{Out.ar(~inputBus, In.ar(~emptyBus))}.play;
+			};
+			*/
 			~playButton = Button(w, ~playButRect)
-			           .states_([
-				["Play", Color.white, Color.new255(red: 69, green: 111, blue: 34, alpha: 255)],
-				["Pause", Color.white, Color.new255(red: 47, green: 72, blue: 88, alpha: 255)],
+			.states_([
+				["Stop", Color.white, Color.new255(red: 111, green: 69, blue: 34, alpha: 255)],
+				["Play", Color.white, Color.new255(red: 69, green: 111, blue: 34, alpha: 255)]
 			])
-			.mouseDownAction_({
-				~snd = ~funcs.at(~inputMenu.value).play;
-			})
 			.action_({|butt|
 				if (butt.value==1,
 					{
-						~snd.release;
-						//CmdPeriod.run
+						~sinusoidSig.free;
+						~guitarSig.free;
+						~voiceSig.free;
+						~bassSig.free;
+						~alabamaSig.free;
+						~micSig.free;
+						~soundcardSig.free;
 					},
-					{}
-			)
+					{if (~inputMenu.value==0,
+						{
+							~sinusoidSig = {Out.ar(~inputBus, ~funcs.at(~inputMenu.value))}.play;
+							~guitarSig.free;
+							~voiceSig.free;
+							~bassSig.free;
+							~alabamaSig.free;
+							~micSig.free;
+							~soundcardSig.free;
+						},
+						{if(~inputMenu.value==1,
+							{
+								~sinusoidSig.free;
+								~guitarSig = {Out.ar(~inputBus, ~funcs.at(~inputMenu.value))}.play;
+								~voiceSig.free;
+								~bassSig.free;
+								~alabamaSig.free;
+								~micSig.free;
+								~soundcardSig.free;
+							},
+							{if(~inputMenu.value==2,
+								{
+									~sinusoidSig.free;
+									~guitarSig.free;
+									~voiceSig = {Out.ar(~inputBus, ~funcs.at(~inputMenu.value))}.play;
+									~bassSig.free;
+									~alabamaSig.free;
+									~micSig.free;
+									~soundcardSig.free;
+								},
+								{if(~inputMenu.value==3,
+									{
+										~sinusoidSig.free;
+										~guitarSig.free;
+										~voiceSig.free;
+										~bassSig = {Out.ar(~inputBus, ~funcs.at(~inputMenu.value))}.play;
+										~alabamaSig.free;
+										~micSig.free;
+										~soundcardSig.free;
+									},
+									{
+										~sinusoidSig.free;
+										~guitarSig.free;
+										~voiceSig.free;
+										~bassSig.free;
+										~alabamaSig = {Out.ar(~inputBus, ~funcs.at(~inputMenu.value))}.play;
+										~micSig.free;
+										~soundcardSig.free;
+									}
+								)}
+							)}
+						)}
+					)}
+				)
 			});
 			~playButton.font_(Font("Kreon", 15));
 		};
@@ -609,16 +797,66 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 ~iCanDoItButton.font = f;
 ~iCanDoItButton.value = 0;
 ~iCanDoItButton.action_({|butt|
-	if (butt.value==1,
-	{
+	if (butt.value==0,
+		{
+			w.background = ~wColor;
+			~tutorialButton.value = 1;
+		},
+		{
 			w.background = ~wColor2;
 			~tutorialButton.value = 0;
-			~playButton.close;
+			// ~playButton.close;
+			~iCanDoItw.front;
 			~inputMenu.clear;
 			~inputMenu.items_(["Computer mic", "Soundcard"]);
-			~iCanDoItw.front;
-	},
-	{w.background = ~wColor; ~tutorialButton.value = 1};
+			~playButton = Button(w, ~playButRect)
+			.states_([
+				["Stop", Color.white, Color.new255(red: 111, green: 69, blue: 34, alpha: 255)],
+				["Play", Color.white, Color.new255(red: 69, green: 111, blue: 34, alpha: 255)]
+			])
+			.action_({|butt|
+				if (butt.value==1,
+					{
+						~sinusoidSig.free;
+						~guitarSig.free;
+						~voiceSig.free;
+						~bassSig.free;
+						~alabamaSig.free;
+						~micSig.free;
+						~soundcardSig.free;
+					},
+					{if (~inputMenu.value==0,
+						{
+							~sinusoidSig.free;
+							~guitarSig.free;
+							~voiceSig.free;
+							~bassSig.free;
+							~alabamaSig.free;
+							~micSig = {Out.ar(~inputBus, ~funcs.at(~inputMenu.value))}.play;
+							~soundcardSig.free;
+						},
+						{
+							~sinusoidSig.free;
+							~guitarSig.free;
+							~voiceSig.free;
+							~bassSig.free;
+							~alabamaSig.free;
+							~micSig.free;
+							~soundcardSig = {Out.ar(~inputBus, ~funcs.at(~inputMenu.value))}.play;
+						}
+					)}
+				)
+			});
+			~playButton.font_(Font("Kreon", 15));
+			// ~funcs.at(~inputMenu.value + 5).run(true);
+			/*
+			~inputMenu.action = {
+				// CmdPeriod.run;
+				// ~snd.run(false);
+				{Out.ar(~inputBus, In.ar(~emptyBus))}.play;
+			};
+			*/
+		};
 )});
 ~iCanDoItw = Window("I can do it mode", Rect(left: 650, top: 460, width: 600, height: 130), false);
 ~iCanDoItw.background = Color.new255(red: 169, green: 211, blue: 134, alpha: 255);
