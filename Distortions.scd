@@ -607,6 +607,7 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 ~inputMenuTitle.font_(Font("Kreon", 11));
 ~inputMenu = PopUpMenu.new(w, Rect(118, 260, 100, 20));
 ~inputMenu.font_(Font("Kreon", 11));
+~inputMenu.action = {~playButton.doAction};
 
 // Wave scopes
 
@@ -681,17 +682,8 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 			w.background = ~wColor;
 			~iCanDoItButton.value = 0;
 			~tutorialw.front;
-			// ~playButton.close;
 			~inputMenu.clear;
 			~inputMenu.items_(["Sinusoid", "Guitar mp3", "Voice mp3", "Bass mp3", "Sweet Home Alabama"]);
-			/*
-			~inputMenu.action = {
-				~playButton.value = 0;
-				// CmdPeriod.run;
-				// ~snd.run(false);
-				{Out.ar(~inputBus, In.ar(~emptyBus))}.play;
-			};
-			*/
 			~playButton = Button(w, ~playButRect)
 			.states_([
 				["Stop", Color.white, Color.new255(red: 111, green: 69, blue: 34, alpha: 255)],
@@ -805,7 +797,6 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 		{
 			w.background = ~wColor2;
 			~tutorialButton.value = 0;
-			// ~playButton.close;
 			~iCanDoItw.front;
 			~inputMenu.clear;
 			~inputMenu.items_(["Computer mic", "Soundcard"]);
@@ -848,14 +839,6 @@ o = ControlSpec.new(minval: 0.0, maxval: 2.0);
 				)
 			});
 			~playButton.font_(Font("Kreon", 15));
-			// ~funcs.at(~inputMenu.value + 5).run(true);
-			/*
-			~inputMenu.action = {
-				// CmdPeriod.run;
-				// ~snd.run(false);
-				{Out.ar(~inputBus, In.ar(~emptyBus))}.play;
-			};
-			*/
 		};
 )});
 ~iCanDoItw = Window("I can do it mode", Rect(left: 650, top: 460, width: 600, height: 130), false);
