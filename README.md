@@ -1,7 +1,7 @@
 # Circuitone
 # THE DISTEACHER
 
-![Screenshot](https://user-images.githubusercontent.com/89461273/233733159-7ef2b0b8-76b8-47d9-b658-c20fc50825c5.png)
+![Screenshot](https://github.com/polimi-cmls-23/group2-HW-SC-Circuitone/assets/89461273/c43a6921-bae6-4d2c-8f83-b62525adf4a6)
 
 Do you like distorted guitar music but you have never undestood how do guitarists obtain that sound? Well, our project is here to help you!
 
